@@ -44,6 +44,12 @@
 #include <AutoConnect.h>
 #include "ESP32WebCam.h"
 
+
+#define ACCESSPOINT_SSID "esp32timelapse01 AP"
+#define ACCESSPOINT_PSK "12345678"
+#define ESP_HOSTNAME "esp32timelapse01"
+
+
 // /*****************************************************************************
 // * FAST LED Plugin
 // *****************************************************************************/
@@ -73,128 +79,151 @@
 
 
 
-///*************
-// * Fileserver: http://www.iotsharing.com/2019/07/how-to-turn-esp-with-sdcard-or-spiffs-a-web-file-server.html
-// * **********/
+/*************
+ * Fileserver: http://www.iotsharing.com/2019/07/how-to-turn-esp-with-sdcard-or-spiffs-a-web-file-server.html
+  **********/
 //#include <ESP32WebServer.h>
+//#include <WiFi.h>
 //#include <ESPmDNS.h>
 //#include <SPI.h>
 //#include <mySD.h>
-//#include "SPIFFS.h"
-//
-//String serverIndex = "<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>"
-//"<form method='POST' action='#' enctype='multipart/form-data' id='upload_form'>"
-//    "<input type='file' name='update'>"
-//    "<input type='submit' value='Upload'>"
-//"</form>"
-//"<div id='prg'>progress: 0%</div>"
-//"<script>"
-//"$('form').submit(function(e){"
-//    "e.preventDefault();"
-//      "var form = $('#upload_form')[0];"
-//      "var data = new FormData(form);"
-//      " $.ajax({"
-//            "url: '/update',"
-//            "type: 'POST',"               
-//            "data: data,"
-//            "contentType: false,"                  
-//            "processData:false,"  
-//            "xhr: function() {"
-//                "var xhr = new window.XMLHttpRequest();"
-//                "xhr.upload.addEventListener('progress', function(evt) {"
-//                    "if (evt.lengthComputable) {"
-//                        "var per = evt.loaded / evt.total;"
-//                        "$('#prg').html('progress: ' + Math.round(per*100) + '%');"
-//                    "}"
-//               "}, false);"
-//               "return xhr;"
-//            "},"                                
-//            "success:function(d, s) {"    
-//                "console.log('success!')"
-//           "},"
-//            "error: function (a, b, c) {"
-//            "}"
-//          "});"
-//"});"
-//"</script>";
-//
-//ESP32WebServer server(4000);
-//File root;
-//bool opened = false;
-//
-//String printDirectory(File dir, int numTabs) {
-//  String response = "";
-//  dir.rewindDirectory();
-//  
-//  while(true) {
-//     File entry =  dir.openNextFile();
-//     if (! entry) {
-//       // no more files
-//       //Serial.println("**nomorefiles**");
-//       break;
-//     }
-//     for (uint8_t i=0; i<numTabs; i++) {
-//       Serial.print('\t');   // we'll have a nice indentation
-//     }
-//     // Recurse for directories, otherwise print the file size
-//     if (entry.isDirectory()) {
-//       printDirectory(entry, numTabs+1);
-//     } else {
-//       response += String("<a href='") + String(entry.name()) + String("'>") + String(entry.name()) + String("</a>") + String("</br>");
-//     }
-//     entry.close();
-//   }
-//   return String("List files:</br>") + response + String("</br></br> Upload file:") + serverIndex;
-//}
-//
-//void handleRoot() {
-//  root = SD.open("/");
-//  String res = printDirectory(root, 0);
-//  server.send(200, "text/html", res);
-//}
-//
-//bool loadFromSDCARD(String path){
-//  path.toLowerCase();
-//  String dataType = "text/plain";
-//  if(path.endsWith("/")) path += "index.htm";
-//
-//  if(path.endsWith(".src")) path = path.substring(0, path.lastIndexOf("."));
-//  else if(path.endsWith(".jpg")) dataType = "image/jpeg";
-//  else if(path.endsWith(".txt")) dataType = "text/plain";
-//  else if(path.endsWith(".zip")) dataType = "application/zip";  
-//  //Serial.println( );
-//  File dataFile = SD.open(path.c_str());
-//
-//  if (!dataFile)
-//    return false;
-//
-//  if (server.streamFile(dataFile, dataType) != dataFile.size()) {
-//    Serial.println("Sent less data than expected!");
-//  }
-//
-//  dataFile.close();
-//  return true;
-//}
-//
-//void handleNotFound(){
-//  if(loadFromSDCARD(server.uri())) return;
-//  String message = "SDCARD Not Detected\n\n";
-//  message += "URI: ";
-//  message += server.uri();
-//  message += "\nMethod: ";
-//  message += (server.method() == HTTP_GET)?"GET":"POST";
-//  message += "\nArguments: ";
-//  message += server.args();
-//  message += "\n";
-//  for (uint8_t i=0; i<server.args(); i++){
-//    message += " NAME:"+server.argName(i) + "\n VALUE:" + server.arg(i) + "\n";
-//  }
-//  server.send(404, "text/plain", message);
-//  Serial.println(message);
-//}
+
+String serverIndex = 
+  "<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>"
+  "<form method='POST' action='#' enctype='multipart/form-data' id='upload_form'>"
+      "<input type='file' name='update'>"
+      "<input type='submit' value='Upload'>"
+  "</form>"
+  "<div id='prg'>progress: 0%</div>"
+  "<script>"
+  "$('form').submit(function(e){"
+      "e.preventDefault();"
+        "var form = $('#upload_form')[0];"
+        "var data = new FormData(form);"
+        " $.ajax({"
+              "url: '/update',"
+              "type: 'POST',"               
+              "data: data,"
+              "contentType: false,"                  
+              "processData:false,"  
+              "xhr: function() {"
+                  "var xhr = new window.XMLHttpRequest();"
+                  "xhr.upload.addEventListener('progress', function(evt) {"
+                      "if (evt.lengthComputable) {"
+                          "var per = evt.loaded / evt.total;"
+                          "$('#prg').html('progress: ' + Math.round(per*100) + '%');"
+                      "}"
+                 "}, false);"
+                 "return xhr;"
+              "},"                                
+              "success:function(d, s) {"    
+                  "console.log('success!')"
+             "},"
+              "error: function (a, b, c) {"
+              "}"
+            "});"
+  "});"
+  "</script>";
+WebServer fileserver (4000);
+
+File root; 
+
+bool opened = false;
 
 
+String printDirectory(File dir, int numTabs) {
+  String response = "";
+  dir.rewindDirectory();
+  
+  while(true) {
+     File entry =  dir.openNextFile();
+     if (! entry) {
+       // no more files
+       //Serial.println("**nomorefiles**");
+       break;
+     }
+     for (uint8_t i=0; i<numTabs; i++) {
+       Serial.print('\t');   // we'll have a nice indentation
+     }
+     // Recurse for directories, otherwise print the file size
+     if (entry.isDirectory()) {
+       printDirectory(entry, numTabs+1);
+     } else {
+       response += String("<a href='") + String(entry.name()) + String("'>") + String(entry.name()) + String("</a>") + String("</br>");
+     }
+     entry.close();
+   }
+   return String("files:</br>") + response + String("</br></br> Upload file:") + serverIndex;
+}
 
+void handleRoot() {
+  root = SD_MMC.open("/");
+  String res1 = "SD-Card " + printDirectory(root, 0);
+  root_spiffs = SPIFFS.open("/");
+  String res2 = "SPIFFS " + printDirectory(root_spiffs, 0);
+  String combined = res1 + res2;
+  fileserver.send(200, "text/html", combined);
+}
+
+bool loadFromSDCARD(String path){
+  path.toLowerCase();
+  String dataType = "text/plain";
+  if(path.endsWith("/")) path += "index.htm";
+
+  if(path.endsWith(".src")) path = path.substring(0, path.lastIndexOf("."));
+  else if(path.endsWith(".jpg")) dataType = "image/jpeg";
+  else if(path.endsWith(".txt")) dataType = "text/plain";
+  else if(path.endsWith(".zip")) dataType = "application/zip";  
+  //Serial.println( );
+  File dataFile = SD_MMC.open(path.c_str());
+
+  if (!dataFile)
+	dataFile = SPIFFS.open(path.c_str());
+  
+  if (!dataFile)
+    return false;
+  
+  if (fileserver.streamFile(dataFile, dataType) != dataFile.size()) {
+    Serial.println("Sent less data than expected!");
+  }
+
+  dataFile.close();
+  return true;
+}
+
+void handleNotFound(){
+  if(loadFromSDCARD(fileserver.uri())) return;
+  String message = "SDCARD Not Detected\n\n";
+  message += "URI: ";
+  message += fileserver.uri();
+  message += "\nMethod: ";
+  message += (fileserver.method() == HTTP_GET)?"GET":"POST";
+  message += "\nArguments: ";
+  message += fileserver.args();
+  message += "\n";
+  for (uint8_t i=0; i<fileserver.args(); i++){
+    message += " NAME:"+fileserver.argName(i) + "\n VALUE:" + fileserver.arg(i) + "\n";
+  }
+  fileserver.send(404, "text/plain", message);
+  Serial.println(message);
+}
+
+void handleNotFoundSpiffs(){
+  if(loadFromSPIFFS(fileserver_spiffs.uri())) return;
+  String message = "SPIFFS Path Not Detected\n\n";
+  message += "URI: ";
+  message += fileserver_spiffs.uri();
+  message += "\nMethod: ";
+  message += (fileserver_spiffs.method() == HTTP_GET)?"GET":"POST";
+  message += "\nArguments: ";
+  message += fileserver_spiffs.args();
+  message += "\n";
+  for (uint8_t i=0; i<fileserver_spiffs.args(); i++){
+    message += " NAME:"+fileserver_spiffs.argName(i) + "\n VALUE:" + fileserver_spiffs.arg(i) + "\n";
+  }
+  fileserver_spiffs.send(404, "text/plain", message);
+  Serial.println(message);
+}
 
 
 // Image sensor settings page
@@ -693,7 +722,9 @@ void setup() {
   // mount status and automatically start SD or SD_MMC if it is not mounted.
   // However, starting SD or SD_MMC beforehand will speed up the response to
   // saving the capture file and avoid session timeouts.
-  // SD_MMC.begin(); // or SD.begin();
+  // 
+  SD_MMC.begin(); // or SD.begin();
+  
 
   // Note that this sketch places the viewer HTML page in SPIFFS, so run
   // SPIFFS.begin before starting Web Server.
@@ -711,6 +742,9 @@ void setup() {
 
   // The various configuration settings of AutoConnect are also useful for
   // using the ESP32WebCam class.
+  config.apid = ACCESSPOINT_SSID;
+  config.psk  = ACCESSPOINT_PSK;
+  config.hostName = ESP_HOSTNAME;
   config.autoReconnect = true;
   config.reconnectInterval = 1;
   config.ota = AC_OTA_BUILTIN;
@@ -744,36 +778,36 @@ void setup() {
   }
 
   ////handle uri  
-  //server.on("/", handleRoot);
-  //server.onNotFound(handleNotFound);
+  fileserver.on("/", handleRoot);
+  fileserver.onNotFound(handleNotFound);
   //
   ///*handling uploading file */
-  //server.on("/update", HTTP_POST, [](){
-  //  server.sendHeader("Connection", "close");
-  //},[](){
-  //  HTTPUpload& upload = server.upload();
-  //  if(opened == false){
-  //    opened = true;
-  //    root = SD.open((String("/") + upload.filename).c_str(), FILE_WRITE);  
-  //    if(!root){
-  //      Serial.println("- failed to open file for writing");
-  //      return;
-  //    }
-  //  } 
-  //  if(upload.status == UPLOAD_FILE_WRITE){
-  //    if(root.write(upload.buf, upload.currentSize) != upload.currentSize){
-  //      Serial.println("- failed to write");
-  //      return;
-  //    }
-  //  } else if(upload.status == UPLOAD_FILE_END){
-  //    root.close();
-  //    Serial.println("UPLOAD_FILE_END");
-  //    opened = false;
-  //  }
-  //});
-  //server.begin();
-  //Serial.println("HTTP server started");
-  
+  fileserver.on("/update", HTTP_POST, [](){
+    fileserver.sendHeader("Connection", "close");
+  },[](){
+    HTTPUpload& upload = fileserver.upload();
+    if(opened == false){
+      opened = true;
+      root = SD_MMC.open((String("/") + upload.filename).c_str(), FILE_WRITE);  
+      if(!root){
+        Serial.println("- failed to open file for writing");
+        return;
+      }
+    } 
+    if(upload.status == UPLOAD_FILE_WRITE){
+      if(root.write(upload.buf, upload.currentSize) != upload.currentSize){
+        Serial.println("- failed to write");
+        return;
+      }
+    } else if(upload.status == UPLOAD_FILE_END){
+      root.close();
+      Serial.println("UPLOAD_FILE_END");
+      opened = false;
+    }
+  });
+ 
+  fileserver.begin();
+  Serial.println("HTTP fileserver started");
 }
 
 //void FillLEDsFromPaletteColors( uint8_t colorIndex)
@@ -887,7 +921,8 @@ void loop() {
   // ESP-IDF Web Server component launched by the ESP32WebCam continues in a
   // separate task.
   portal.handleClient();  
-  //server.handleClient();
+  fileserver.handleClient();
+  
   //ChangePalettePeriodically();
   //  
   //  static uint8_t startIndex = 0;
