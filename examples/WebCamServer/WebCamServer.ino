@@ -44,10 +44,8 @@
 #include <AutoConnect.h>
 #include "ESP32WebCam.h"
 
-
-#define ACCESSPOINT_SSID "esp32timelapse01 AP"
+#define ACCESSPOINT_SSID "esp32timelapse01"
 #define ACCESSPOINT_PSK "12345678"
-#define ESP_HOSTNAME "esp32timelapse01"
 
 
 // /*****************************************************************************
@@ -82,12 +80,6 @@
 /*************
  * Fileserver: http://www.iotsharing.com/2019/07/how-to-turn-esp-with-sdcard-or-spiffs-a-web-file-server.html
   **********/
-//#include <ESP32WebServer.h>
-//#include <WiFi.h>
-//#include <ESPmDNS.h>
-//#include <SPI.h>
-//#include <mySD.h>
-
 String serverIndex = 
   "<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>"
   "<form method='POST' action='#' enctype='multipart/form-data' id='upload_form'>"
@@ -124,12 +116,15 @@ String serverIndex =
             "});"
   "});"
   "</script>";
+  
 WebServer fileserver (4000);
+WebServer fileserver_spiffs (5000);
 
 File root; 
+File root_spiffs;
 
 bool opened = false;
-
+bool opened_spiffs = false;
 
 String printDirectory(File dir, int numTabs) {
   String response = "";
@@ -156,13 +151,17 @@ String printDirectory(File dir, int numTabs) {
    return String("files:</br>") + response + String("</br></br> Upload file:") + serverIndex;
 }
 
+
 void handleRoot() {
   root = SD_MMC.open("/");
-  String res1 = "SD-Card " + printDirectory(root, 0);
+  String res = "SD-Card " + printDirectory(root, 0);
+  fileserver.send(200, "text/html", res);
+}
+
+void handleRootSpiffs() {
   root_spiffs = SPIFFS.open("/");
-  String res2 = "SPIFFS " + printDirectory(root_spiffs, 0);
-  String combined = res1 + res2;
-  fileserver.send(200, "text/html", combined);
+  String res = "SPIFFS " + printDirectory(root_spiffs, 0);
+  fileserver_spiffs.send(200, "text/html", res);
 }
 
 bool loadFromSDCARD(String path){
@@ -174,16 +173,36 @@ bool loadFromSDCARD(String path){
   else if(path.endsWith(".jpg")) dataType = "image/jpeg";
   else if(path.endsWith(".txt")) dataType = "text/plain";
   else if(path.endsWith(".zip")) dataType = "application/zip";  
-  //Serial.println( );
+  
   File dataFile = SD_MMC.open(path.c_str());
 
-  if (!dataFile)
-	dataFile = SPIFFS.open(path.c_str());
-  
   if (!dataFile)
     return false;
   
   if (fileserver.streamFile(dataFile, dataType) != dataFile.size()) {
+    Serial.println("Sent less data than expected!");
+  }
+
+  dataFile.close();
+  return true;
+}
+
+bool loadFromSPIFFS(String path){
+  path.toLowerCase();
+  String dataType = "text/plain";
+  if(path.endsWith("/")) path += "index.htm";
+
+  if(path.endsWith(".src")) path = path.substring(0, path.lastIndexOf("."));
+  else if(path.endsWith(".jpg")) dataType = "image/jpeg";
+  else if(path.endsWith(".txt")) dataType = "text/plain";
+  else if(path.endsWith(".zip")) dataType = "application/zip";  
+  
+  File dataFile = SPIFFS.open(path.c_str());
+  
+  if (!dataFile)
+    return false;
+  
+  if (fileserver_spiffs.streamFile(dataFile, dataType) != dataFile.size()) {
     Serial.println("Sent less data than expected!");
   }
 
@@ -210,7 +229,7 @@ void handleNotFound(){
 
 void handleNotFoundSpiffs(){
   if(loadFromSPIFFS(fileserver_spiffs.uri())) return;
-  String message = "SPIFFS Path Not Detected\n\n";
+  String message = "SPIFFS Not Detected\n\n";
   message += "URI: ";
   message += fileserver_spiffs.uri();
   message += "\nMethod: ";
@@ -729,7 +748,31 @@ void setup() {
   // Note that this sketch places the viewer HTML page in SPIFFS, so run
   // SPIFFS.begin before starting Web Server.
   SPIFFS.begin();
-
+  
+  
+  // read hostname and password from SPIFFS
+  //File file = SD_MMC.open("/hostname.txt");
+  //if (file) {
+  //  std::vector<String> v;
+  //  while (file.available()) {
+  //    v.push_back(file.readStringUntil('\n'));
+  //  }
+  //  file.close();
+  //  
+  //  for (String s : v) {
+  //    Serial.println(s);
+  //  }
+	//
+	//  config.apid = v[0];
+	//  config.hostName = v[0]; 
+  //}else
+  //{
+  //    Serial.println("Failed to open hostname file for reading, using default values");
+  //    config.apid = ACCESSPOINT_SSID;
+  //    config.hostName = ACCESSPOINT_SSID;
+  //}
+  
+  
   // Initialize the image sensor during the start phase of the sketch.
   esp_err_t err = webcam.sensorInit(model);
   if (err != ESP_OK)
@@ -744,7 +787,7 @@ void setup() {
   // using the ESP32WebCam class.
   config.apid = ACCESSPOINT_SSID;
   config.psk  = ACCESSPOINT_PSK;
-  config.hostName = ESP_HOSTNAME;
+  config.hostName = ACCESSPOINT_SSID;
   config.autoReconnect = true;
   config.reconnectInterval = 1;
   config.ota = AC_OTA_BUILTIN;
@@ -805,9 +848,42 @@ void setup() {
       opened = false;
     }
   });
- 
+   
   fileserver.begin();
-  Serial.println("HTTP fileserver started");
+  Serial.println("HTTP SD card fileserver started");
+  
+  ////handle uri  
+  fileserver_spiffs.on("/", handleRootSpiffs);
+  fileserver_spiffs.onNotFound(handleNotFoundSpiffs);
+  //
+  ///*handling uploading file */
+  fileserver_spiffs.on("/update", HTTP_POST, [](){
+    fileserver_spiffs.sendHeader("Connection", "close");
+  },[](){
+    HTTPUpload& upload = fileserver_spiffs.upload();
+    if(opened_spiffs == false){
+      opened_spiffs = true;
+      root_spiffs = SPIFFS.open((String("/") + upload.filename).c_str(), FILE_WRITE);  
+      if(!root_spiffs){
+        Serial.println("- failed to open file for writing");
+        return;
+      }
+    } 
+    if(upload.status == UPLOAD_FILE_WRITE){
+      if(root_spiffs.write(upload.buf, upload.currentSize) != upload.currentSize){
+        Serial.println("- failed to write");
+        return;
+      }
+    } else if(upload.status == UPLOAD_FILE_END){
+      root_spiffs.close();
+      Serial.println("UPLOAD_FILE_END");
+      opened_spiffs = false;
+    }
+  });
+   
+  fileserver_spiffs.begin();
+  Serial.println("HTTP SPIFFS fileserver started");
+  
 }
 
 //void FillLEDsFromPaletteColors( uint8_t colorIndex)
@@ -922,7 +998,7 @@ void loop() {
   // separate task.
   portal.handleClient();  
   fileserver.handleClient();
-  
+  fileserver_spiffs.handleClient();
   //ChangePalettePeriodically();
   //  
   //  static uint8_t startIndex = 0;
