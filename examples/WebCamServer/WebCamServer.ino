@@ -44,6 +44,159 @@
 #include <AutoConnect.h>
 #include "ESP32WebCam.h"
 
+// /*****************************************************************************
+// * FAST LED Plugin
+// *****************************************************************************/
+//  
+// #include <FastLED.h>
+// #define LED_PIN     3
+// #define NUM_LEDS    13
+// #define BRIGHTNESS  64
+// #define LED_TYPE    WS2812
+// #define COLOR_ORDER GRB
+// CRGB leds[NUM_LEDS];
+// 
+// #define UPDATES_PER_SECOND 100
+// 
+// CRGBPalette16 currentPalette;
+// TBlendType    currentBlending;
+// 
+// extern CRGBPalette16 myRedWhiteBluePalette;
+// extern const TProgmemPalette16 myRedWhiteBluePalette_p PROGMEM;
+// 
+// //#include "soc/soc.h" //disable brownout problems
+// //#include "soc/rtc_cntl_reg.h"  //disable brownout problems
+// 
+// /*****************************************************************************
+// * FAST LED Plugin
+// *****************************************************************************/
+
+
+
+///*************
+// * Fileserver: http://www.iotsharing.com/2019/07/how-to-turn-esp-with-sdcard-or-spiffs-a-web-file-server.html
+// * **********/
+//#include <ESP32WebServer.h>
+//#include <ESPmDNS.h>
+//#include <SPI.h>
+//#include <mySD.h>
+//#include "SPIFFS.h"
+//
+//String serverIndex = "<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>"
+//"<form method='POST' action='#' enctype='multipart/form-data' id='upload_form'>"
+//    "<input type='file' name='update'>"
+//    "<input type='submit' value='Upload'>"
+//"</form>"
+//"<div id='prg'>progress: 0%</div>"
+//"<script>"
+//"$('form').submit(function(e){"
+//    "e.preventDefault();"
+//      "var form = $('#upload_form')[0];"
+//      "var data = new FormData(form);"
+//      " $.ajax({"
+//            "url: '/update',"
+//            "type: 'POST',"               
+//            "data: data,"
+//            "contentType: false,"                  
+//            "processData:false,"  
+//            "xhr: function() {"
+//                "var xhr = new window.XMLHttpRequest();"
+//                "xhr.upload.addEventListener('progress', function(evt) {"
+//                    "if (evt.lengthComputable) {"
+//                        "var per = evt.loaded / evt.total;"
+//                        "$('#prg').html('progress: ' + Math.round(per*100) + '%');"
+//                    "}"
+//               "}, false);"
+//               "return xhr;"
+//            "},"                                
+//            "success:function(d, s) {"    
+//                "console.log('success!')"
+//           "},"
+//            "error: function (a, b, c) {"
+//            "}"
+//          "});"
+//"});"
+//"</script>";
+//
+//ESP32WebServer server(4000);
+//File root;
+//bool opened = false;
+//
+//String printDirectory(File dir, int numTabs) {
+//  String response = "";
+//  dir.rewindDirectory();
+//  
+//  while(true) {
+//     File entry =  dir.openNextFile();
+//     if (! entry) {
+//       // no more files
+//       //Serial.println("**nomorefiles**");
+//       break;
+//     }
+//     for (uint8_t i=0; i<numTabs; i++) {
+//       Serial.print('\t');   // we'll have a nice indentation
+//     }
+//     // Recurse for directories, otherwise print the file size
+//     if (entry.isDirectory()) {
+//       printDirectory(entry, numTabs+1);
+//     } else {
+//       response += String("<a href='") + String(entry.name()) + String("'>") + String(entry.name()) + String("</a>") + String("</br>");
+//     }
+//     entry.close();
+//   }
+//   return String("List files:</br>") + response + String("</br></br> Upload file:") + serverIndex;
+//}
+//
+//void handleRoot() {
+//  root = SD.open("/");
+//  String res = printDirectory(root, 0);
+//  server.send(200, "text/html", res);
+//}
+//
+//bool loadFromSDCARD(String path){
+//  path.toLowerCase();
+//  String dataType = "text/plain";
+//  if(path.endsWith("/")) path += "index.htm";
+//
+//  if(path.endsWith(".src")) path = path.substring(0, path.lastIndexOf("."));
+//  else if(path.endsWith(".jpg")) dataType = "image/jpeg";
+//  else if(path.endsWith(".txt")) dataType = "text/plain";
+//  else if(path.endsWith(".zip")) dataType = "application/zip";  
+//  //Serial.println( );
+//  File dataFile = SD.open(path.c_str());
+//
+//  if (!dataFile)
+//    return false;
+//
+//  if (server.streamFile(dataFile, dataType) != dataFile.size()) {
+//    Serial.println("Sent less data than expected!");
+//  }
+//
+//  dataFile.close();
+//  return true;
+//}
+//
+//void handleNotFound(){
+//  if(loadFromSDCARD(server.uri())) return;
+//  String message = "SDCARD Not Detected\n\n";
+//  message += "URI: ";
+//  message += server.uri();
+//  message += "\nMethod: ";
+//  message += (server.method() == HTTP_GET)?"GET":"POST";
+//  message += "\nArguments: ";
+//  message += server.args();
+//  message += "\n";
+//  for (uint8_t i=0; i<server.args(); i++){
+//    message += " NAME:"+server.argName(i) + "\n VALUE:" + server.arg(i) + "\n";
+//  }
+//  server.send(404, "text/plain", message);
+//  Serial.println(message);
+//}
+
+
+
+
+
 // Image sensor settings page
 const char  CAMERA_SETUP_PAGE[] = R"*(
 {
@@ -311,9 +464,12 @@ const char*  const _webcamserver_html = "/webcamview.html";
 // This sketch works even if you omit the NTP server specification. In that
 // case, the suffix timestamp of the captured image file is the elapsed time
 // since the ESP module was powered on.
-const char*  const _tz = "JST-9";
-const char*  const _ntp1 = "ntp.nict.jp";
-const char*  const _ntp2 = "ntp.jst.mfeed.ad.jp";
+//const char*  const _tz = "JST-9";
+//const char*  const _ntp1 = "ntp.nict.jp";
+//const char*  const _ntp2 = "ntp.jst.mfeed.ad.jp";
+const char*  const _tz = "UTC-1";
+const char*  const _ntp1 = "0.de.pool.ntp.org";
+const char*  const _ntp2 = "1.de.pool.ntp.org";
 
 // You can change the URL assigned to interface with ESP32WebCam according to
 // your needs without the sketch code modification.
@@ -522,7 +678,15 @@ void setup() {
   delay(1000);
   Serial.begin(115200);
   Serial.println();
- 
+
+  //FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
+  //FastLED.setBrightness(  BRIGHTNESS );
+  //  
+  //currentPalette = RainbowColors_p;
+  //currentBlending = LINEARBLEND;
+
+  //WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
+  
   // Start SD or SD_MMC to save the captured image to the SD card equipped with
   // the ESP32-CAM module. SD.begin() or SD_MMC.begin() does not need to be
   // stated explicitly; the ESP32Cam class will internally detect the SD card
@@ -578,14 +742,161 @@ void setup() {
     else
       Serial.printf("Camera server start failed 0x%04x\n", err);
   }
+
+  ////handle uri  
+  //server.on("/", handleRoot);
+  //server.onNotFound(handleNotFound);
+  //
+  ///*handling uploading file */
+  //server.on("/update", HTTP_POST, [](){
+  //  server.sendHeader("Connection", "close");
+  //},[](){
+  //  HTTPUpload& upload = server.upload();
+  //  if(opened == false){
+  //    opened = true;
+  //    root = SD.open((String("/") + upload.filename).c_str(), FILE_WRITE);  
+  //    if(!root){
+  //      Serial.println("- failed to open file for writing");
+  //      return;
+  //    }
+  //  } 
+  //  if(upload.status == UPLOAD_FILE_WRITE){
+  //    if(root.write(upload.buf, upload.currentSize) != upload.currentSize){
+  //      Serial.println("- failed to write");
+  //      return;
+  //    }
+  //  } else if(upload.status == UPLOAD_FILE_END){
+  //    root.close();
+  //    Serial.println("UPLOAD_FILE_END");
+  //    opened = false;
+  //  }
+  //});
+  //server.begin();
+  //Serial.println("HTTP server started");
+  
 }
+
+//void FillLEDsFromPaletteColors( uint8_t colorIndex)
+//{
+//    uint8_t brightness = 255;
+//    
+//    for( int i = 0; i < NUM_LEDS; ++i) {
+//        leds[i] = ColorFromPalette( currentPalette, colorIndex, brightness, currentBlending);
+//        colorIndex += 3;
+//    }
+//}
+
+
+
+
+// This function fills the palette with totally random colors.
+//void SetupTotallyRandomPalette()
+//{
+//    for( int i = 0; i < 16; ++i) {
+//        currentPalette[i] = CHSV( random8(), 255, random8());
+//    }
+//}
+
+// This function sets up a palette of black and white stripes,
+// using code.  Since the palette is effectively an array of
+// sixteen CRGB colors, the various fill_* functions can be used
+// to set them up.
+//void SetupBlackAndWhiteStripedPalette()
+//{
+//    // 'black out' all 16 palette entries...
+//    fill_solid( currentPalette, 16, CRGB::Black);
+//    // and set every fourth one to white.
+//    currentPalette[0] = CRGB::White;
+//    currentPalette[4] = CRGB::White;
+//    currentPalette[8] = CRGB::White;
+//    currentPalette[12] = CRGB::White;
+//    
+//}
+
+// This function sets up a palette of purple and green stripes.
+//void SetupPurpleAndGreenPalette()
+//{
+//    CRGB purple = CHSV( HUE_PURPLE, 255, 255);
+//    CRGB green  = CHSV( HUE_GREEN, 255, 255);
+//    CRGB black  = CRGB::Black;
+//    
+//    currentPalette = CRGBPalette16(
+//                                   green,  green,  black,  black,
+//                                   purple, purple, black,  black,
+//                                   green,  green,  black,  black,
+//                                   purple, purple, black,  black );
+//}
+
+
+// This example shows how to set up a static color palette
+// which is stored in PROGMEM (flash), which is almost always more
+// plentiful than RAM.  A static PROGMEM palette like this
+// takes up 64 bytes of flash.
+//const TProgmemPalette16 myRedWhiteBluePalette_p PROGMEM =
+//{
+//    CRGB::Red,
+//    CRGB::Gray, // 'white' is too bright compared to red and blue
+//    CRGB::Blue,
+//    CRGB::Black,
+//    
+//    CRGB::Red,
+//    CRGB::Gray,
+//    CRGB::Blue,
+//    CRGB::Black,
+//    
+//    CRGB::Red,
+//    CRGB::Red,
+//    CRGB::Gray,
+//    CRGB::Gray,
+//    CRGB::Blue,
+//    CRGB::Blue,
+//    CRGB::Black,
+//    CRGB::Black
+//};
+// There are several different palettes of colors demonstrated here.
+//
+// FastLED provides several 'preset' palettes: RainbowColors_p, RainbowStripeColors_p,
+// OceanColors_p, CloudColors_p, LavaColors_p, ForestColors_p, and PartyColors_p.
+//
+// Additionally, you can manually define your own color palettes, or you can write
+// code that creates color palettes on the fly.  All are shown here.
+
+//void ChangePalettePeriodically()
+//{
+//    uint8_t secondHand = (millis() / 1000) % 60;
+//    static uint8_t lastSecond = 99;
+//    
+//    if( lastSecond != secondHand) {
+//        lastSecond = secondHand;
+//        if( secondHand ==  0)  { currentPalette = RainbowColors_p;         currentBlending = LINEARBLEND; }
+//        if( secondHand == 10)  { currentPalette = RainbowStripeColors_p;   currentBlending = NOBLEND;  }
+//        if( secondHand == 15)  { currentPalette = RainbowStripeColors_p;   currentBlending = LINEARBLEND; }
+//        if( secondHand == 20)  { SetupPurpleAndGreenPalette();             currentBlending = LINEARBLEND; }
+//        if( secondHand == 25)  { SetupTotallyRandomPalette();              currentBlending = LINEARBLEND; }
+//        if( secondHand == 30)  { SetupBlackAndWhiteStripedPalette();       currentBlending = NOBLEND; }
+//        if( secondHand == 35)  { SetupBlackAndWhiteStripedPalette();       currentBlending = LINEARBLEND; }
+//        if( secondHand == 40)  { currentPalette = CloudColors_p;           currentBlending = LINEARBLEND; }
+//        if( secondHand == 45)  { currentPalette = PartyColors_p;           currentBlending = LINEARBLEND; }
+//        if( secondHand == 50)  { currentPalette = myRedWhiteBluePalette_p; currentBlending = NOBLEND;  }
+//        if( secondHand == 55)  { currentPalette = myRedWhiteBluePalette_p; currentBlending = LINEARBLEND; }
+//    }
+//}
 
 void loop() {
   // The handleClient is needed for WebServer class hosted with AutoConnect.
   // ESP-IDF Web Server component launched by the ESP32WebCam continues in a
   // separate task.
-  portal.handleClient();
-
-  // Allow CPU to switch to other tasks.
+  portal.handleClient();  
+  //server.handleClient();
+  //ChangePalettePeriodically();
+  //  
+  //  static uint8_t startIndex = 0;
+  //  startIndex = startIndex + 1; /* motion speed */
+  //  
+  //  FillLEDsFromPaletteColors( startIndex);
+  //  
+  //  FastLED.show();
+  //  FastLED.delay(1000 / UPDATES_PER_SECOND);
+  //// Allow CPU to switch to other tasks.
   delay(1);
 }

@@ -155,9 +155,9 @@ esp_err_t ESP32WebCam::startCameraServer(const char* streamPath, const char* cap
       .method = HTTP_GET,
       .handler = ESP32WebCam::_streamHandler,
       .user_ctx = nullptr,
-      .is_websocket = false,
-      .handle_ws_control_frames = false,
-      .supported_subprotocol = nullptr
+      //.is_websocket = false,
+      //.handle_ws_control_frames = false,
+      //.supported_subprotocol = nullptr
     };
     // Register captureUrl handler
     httpd_uri_t captureUri = {
@@ -165,9 +165,9 @@ esp_err_t ESP32WebCam::startCameraServer(const char* streamPath, const char* cap
       .method = HTTP_GET,
       .handler = ESP32WebCam::_captureHandler,
       .user_ctx = nullptr,
-      .is_websocket = false,
-      .handle_ws_control_frames = false,
-      .supported_subprotocol = nullptr
+      //.is_websocket = false,
+      //.handle_ws_control_frames = false,
+      //.supported_subprotocol = nullptr
     };
     // Register promptUrl handler
     httpd_uri_t promptUri = {
@@ -175,9 +175,9 @@ esp_err_t ESP32WebCam::startCameraServer(const char* streamPath, const char* cap
       .method = HTTP_GET,
       .handler = ESP32WebCam::_promptHandler,
       .user_ctx = nullptr,
-      .is_websocket = false,
-      .handle_ws_control_frames = false,
-      .supported_subprotocol = nullptr
+      //.is_websocket = false,
+      //.handle_ws_control_frames = false,
+      //.supported_subprotocol = nullptr
     };
     rc = httpd_register_uri_handler(_stream_d, &captureUri);
     if (rc != ESP_OK)
