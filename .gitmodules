@@ -1,0 +1,3 @@
+[submodule "examples/WebCamServerTimelapseBox/src/ESPFtpServer"]
+	path = examples/WebCamServerTimelapseBox/src/ESPFtpServer
+	url = https://github.com/protohaus/ESPFtpServerUserPorts.git

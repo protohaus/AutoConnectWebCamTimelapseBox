@@ -45,7 +45,7 @@
 #include <SPIFFS.h>
 #include <AutoConnect.h>
 #include "ESP32WebCam.h"
-#include <ESPFtpServer.h>
+#include "src/ESPFtpServer/ESPFtpServer.h"
 #include "SD_MMC.h"
 
 #define ACCESSPOINT_SSID "esp32timelapse01"
