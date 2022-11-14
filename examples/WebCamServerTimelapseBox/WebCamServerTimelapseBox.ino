@@ -48,15 +48,13 @@
 #include "src/ESPFtpServer/ESPFtpServer.h"
 #include "SD_MMC.h"
 
-#define ACCESSPOINT_SSID "esp32timelapse01"
-#define ACCESSPOINT_PSK "12345678"
+String esp_hostname = "esp32timelapse"; // min. 3 characters
+String esp_password = "12345678";
 
 #define FTP_CTRL_PORT_SD      21           // Command port on wich server is listening  
 #define FTP_DATA_PORT_PASV_SD 50009        // Data port in passive mode
 
 FtpServer ftpSrvSD(FTP_CTRL_PORT_SD, FTP_DATA_PORT_PASV_SD);   //set #define FTP_DEBUG in ESP32FtpServer.h to see ftp verbose on serial
-//FtpServer ftpSrvSD;   //set #define FTP_DEBUG in ESP32FtpServer.h to see ftp verbose on serial
-
 
 // /*****************************************************************************
 // * FAST LED Plugin
@@ -587,9 +585,70 @@ void setup() {
   else
     Serial.println ("File system could not be opened; ftp server will not work");
 
-  // read hostname and password from SPIFFS
-  //File file = SD_MMC.open("/hostname.txt");
-  //if (file) {
+  // read hostname and password from SD card
+  File hostname_file = SD_MMC.open("/hostname.txt");
+
+  if (!hostname_file) {
+    Serial.println("Failed to open file for reading hostname, using default hostname");
+    Serial.print("Hostname: ");
+    Serial.println(esp_hostname);
+  }else
+  {
+    std::vector<String> v;
+
+    while (hostname_file.available()) {
+      v.push_back(hostname_file.readStringUntil('\n'));
+    }
+    hostname_file.close();
+    Serial.println("content of hostname.txt:");
+    
+    for (String s : v) {
+      Serial.println(s);
+    }
+    
+    if (v[0].length() > 5) {
+      esp_hostname = v[0];
+    }else
+    {
+      Serial.println("Hostname was too short, please use min. 6 characters. Using default hostname");
+      Serial.print("Hostname: ");
+      Serial.println(esp_hostname);
+    }
+  }
+
+  // read hostname and password from SD card
+  File password_file = SD_MMC.open("/password.txt");
+
+  if (!password_file) {
+    Serial.println("Failed to open file for reading password, using default password");
+    Serial.print("Password: ");
+    Serial.println(esp_password);
+  }else
+  {
+    std::vector<String> v;
+
+    while (password_file.available()) {
+      v.push_back(password_file.readStringUntil('\n'));
+    }
+    hostname_file.close();
+    Serial.println("content of password.txt:");
+    
+    for (String s : v) {
+      Serial.println(s);
+    }
+    
+    if (v[0].length() > 7) {
+      esp_password = v[0];
+    }else
+    {
+      Serial.println("Password was too short, please use min. 8 characters. Using default password");
+      Serial.print("Password: ");
+      Serial.println(esp_password);
+    }
+  }
+  
+  
+  //if (hostname_file) {
   //  std::vector<String> v;
   //  while (file.available()) {
   //    v.push_back(file.readStringUntil('\n'));
@@ -622,9 +681,9 @@ void setup() {
  
   // The various configuration settings of AutoConnect are also useful for
   // using the ESP32WebCam class.
-  config.apid = ACCESSPOINT_SSID;
-  config.psk  = ACCESSPOINT_PSK;
-  config.hostName = ACCESSPOINT_SSID;
+  config.apid = esp_hostname;
+  config.psk  = esp_password;
+  config.hostName = esp_hostname;
   config.autoReconnect = true;
   config.reconnectInterval = 1;
   config.ota = AC_OTA_BUILTIN;
@@ -657,7 +716,7 @@ void setup() {
       Serial.printf("Camera server start failed 0x%04x\n", err);
   }
   
-  ftpSrvSD.begin ("esp32", "esp32");    //username, password for ftp.  set ports in ESPFtpServer.h  (default 21, 50009 for PASV)
+  ftpSrvSD.begin (esp_hostname, esp_password.c_str());    //username, password for ftp.  set ports in ESPFtpServer.h  (default 21, 50009 for PASV)
   
 }
 
