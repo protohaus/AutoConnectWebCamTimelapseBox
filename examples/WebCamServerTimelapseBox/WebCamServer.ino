@@ -1,3 +1,5 @@
+
+
 /*
   AutoConnect combined with ESP32 Camera Sensor.
 
@@ -43,6 +45,45 @@
 #include <SPIFFS.h>
 #include <AutoConnect.h>
 #include "ESP32WebCam.h"
+#include <ESPFtpServer.h>
+#include "SD_MMC.h"
+
+#define ACCESSPOINT_SSID "esp32timelapse01"
+#define ACCESSPOINT_PSK "12345678"
+
+#define FTP_CTRL_PORT_SD      21           // Command port on wich server is listening  
+#define FTP_DATA_PORT_PASV_SD 50009        // Data port in passive mode
+
+FtpServer ftpSrvSD(FTP_CTRL_PORT_SD, FTP_DATA_PORT_PASV_SD);   //set #define FTP_DEBUG in ESP32FtpServer.h to see ftp verbose on serial
+//FtpServer ftpSrvSD;   //set #define FTP_DEBUG in ESP32FtpServer.h to see ftp verbose on serial
+
+
+// /*****************************************************************************
+// * FAST LED Plugin
+// *****************************************************************************/
+//  
+// #include <FastLED.h>
+// #define LED_PIN     3
+// #define NUM_LEDS    13
+// #define BRIGHTNESS  64
+// #define LED_TYPE    WS2812
+// #define COLOR_ORDER GRB
+// CRGB leds[NUM_LEDS];
+// 
+// #define UPDATES_PER_SECOND 100
+// 
+// CRGBPalette16 currentPalette;
+// TBlendType    currentBlending;
+// 
+// extern CRGBPalette16 myRedWhiteBluePalette;
+// extern const TProgmemPalette16 myRedWhiteBluePalette_p PROGMEM;
+// 
+// //#include "soc/soc.h" //disable brownout problems
+// //#include "soc/rtc_cntl_reg.h"  //disable brownout problems
+// 
+// /*****************************************************************************
+// * FAST LED Plugin
+// *****************************************************************************/
 
 // Image sensor settings page
 const char  CAMERA_SETUP_PAGE[] = R"*(
@@ -311,9 +352,12 @@ const char*  const _webcamserver_html = "/webcamview.html";
 // This sketch works even if you omit the NTP server specification. In that
 // case, the suffix timestamp of the captured image file is the elapsed time
 // since the ESP module was powered on.
-const char*  const _tz = "JST-9";
-const char*  const _ntp1 = "ntp.nict.jp";
-const char*  const _ntp2 = "ntp.jst.mfeed.ad.jp";
+//const char*  const _tz = "JST-9";
+//const char*  const _ntp1 = "ntp.nict.jp";
+//const char*  const _ntp2 = "ntp.jst.mfeed.ad.jp";
+const char*  const _tz = "UTC-1";
+const char*  const _ntp1 = "0.de.pool.ntp.org";
+const char*  const _ntp2 = "1.de.pool.ntp.org";
 
 // You can change the URL assigned to interface with ESP32WebCam according to
 // your needs without the sketch code modification.
@@ -394,7 +438,7 @@ void handleViewPage(void) {
     return;
   }
 
-  File viewPage = SPIFFS.open(_webcamserver_html, FILE_READ);
+  File viewPage = SD_MMC.open(_webcamserver_html, FILE_READ);
   if (viewPage) {
     portalServer.streamFile(viewPage, "text/html");
     close(viewPage);
@@ -522,50 +566,84 @@ void setup() {
   delay(1000);
   Serial.begin(115200);
   Serial.println();
- 
+
+  //FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
+  //FastLED.setBrightness(  BRIGHTNESS );
+  //  
+  //currentPalette = RainbowColors_p;
+  //currentBlending = LINEARBLEND;
+
+  //WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
+  
   // Start SD or SD_MMC to save the captured image to the SD card equipped with
   // the ESP32-CAM module. SD.begin() or SD_MMC.begin() does not need to be
   // stated explicitly; the ESP32Cam class will internally detect the SD card
   // mount status and automatically start SD or SD_MMC if it is not mounted.
   // However, starting SD or SD_MMC beforehand will speed up the response to
   // saving the capture file and avoid session timeouts.
-  // SD_MMC.begin(); // or SD.begin();
+  // 
+  if (SD_MMC.begin ())
+    Serial.println ("File system opened (" + String ("SD_MMC") + ")");
+  else
+    Serial.println ("File system could not be opened; ftp server will not work");
 
-  // Note that this sketch places the viewer HTML page in SPIFFS, so run
-  // SPIFFS.begin before starting Web Server.
-  SPIFFS.begin();
-
+  // read hostname and password from SPIFFS
+  //File file = SD_MMC.open("/hostname.txt");
+  //if (file) {
+  //  std::vector<String> v;
+  //  while (file.available()) {
+  //    v.push_back(file.readStringUntil('\n'));
+  //  }
+  //  file.close();
+  //  
+  //  for (String s : v) {
+  //    Serial.println(s);
+  //  }
+	//
+	//  config.apid = v[0];
+	//  config.hostName = v[0]; 
+  //}else
+  //{
+  //    Serial.println("Failed to open hostname file for reading, using default values");
+  //    config.apid = ACCESSPOINT_SSID;
+  //    config.hostName = ACCESSPOINT_SSID;
+  //}
+  
+  
   // Initialize the image sensor during the start phase of the sketch.
   esp_err_t err = webcam.sensorInit(model);
   if (err != ESP_OK)
     Serial.printf("Camera init failed 0x%04x\n", err);
-
+ 
   // Loading the image sensor configurarion UI provided by AutoConnectAux.
   portal.load(FPSTR(CAMERA_SETUP_PAGE));
   if (portal.load(FPSTR(CAMERA_SETUP_EXEC)))
     portal.on(_setUrl, setSensor);
-
+ 
   // The various configuration settings of AutoConnect are also useful for
   // using the ESP32WebCam class.
+  config.apid = ACCESSPOINT_SSID;
+  config.psk  = ACCESSPOINT_PSK;
+  config.hostName = ACCESSPOINT_SSID;
   config.autoReconnect = true;
   config.reconnectInterval = 1;
   config.ota = AC_OTA_BUILTIN;
   portal.config(config);
-
+ 
   if (portal.begin()) {
     // Allow hostname.local reach in the local segment by mDNS.
     MDNS.begin(WiFi.getHostname());
     MDNS.addService("http", "tcp", 80);
     Serial.printf("AutoConnect portal %s.local started\n", WiFi.getHostname());
-
+ 
     // By configuring NTP, the timestamp appended to the capture filename will
     // be accurate. But this procedure is optional. It does not affect ESP32Cam
     // execution.
     configTzTime(_tz, _ntp1 ,_ntp2);
-
+ 
     // Activate ESP32WebCam while WiFi is connected.
     err = webcam.startCameraServer();
-
+ 
     if (err == ESP_OK) {
       // This sketch has two endpoints. One assigns the root page as the
       // entrance, and the other assigns a redirector to lead to the viewer-UI
@@ -578,14 +656,135 @@ void setup() {
     else
       Serial.printf("Camera server start failed 0x%04x\n", err);
   }
+  
+  ftpSrvSD.begin ("esp32", "esp32");    //username, password for ftp.  set ports in ESPFtpServer.h  (default 21, 50009 for PASV)
+  
 }
+
+//void FillLEDsFromPaletteColors( uint8_t colorIndex)
+//{
+//    uint8_t brightness = 255;
+//    
+//    for( int i = 0; i < NUM_LEDS; ++i) {
+//        leds[i] = ColorFromPalette( currentPalette, colorIndex, brightness, currentBlending);
+//        colorIndex += 3;
+//    }
+//}
+
+
+
+
+// This function fills the palette with totally random colors.
+//void SetupTotallyRandomPalette()
+//{
+//    for( int i = 0; i < 16; ++i) {
+//        currentPalette[i] = CHSV( random8(), 255, random8());
+//    }
+//}
+
+// This function sets up a palette of black and white stripes,
+// using code.  Since the palette is effectively an array of
+// sixteen CRGB colors, the various fill_* functions can be used
+// to set them up.
+//void SetupBlackAndWhiteStripedPalette()
+//{
+//    // 'black out' all 16 palette entries...
+//    fill_solid( currentPalette, 16, CRGB::Black);
+//    // and set every fourth one to white.
+//    currentPalette[0] = CRGB::White;
+//    currentPalette[4] = CRGB::White;
+//    currentPalette[8] = CRGB::White;
+//    currentPalette[12] = CRGB::White;
+//    
+//}
+
+// This function sets up a palette of purple and green stripes.
+//void SetupPurpleAndGreenPalette()
+//{
+//    CRGB purple = CHSV( HUE_PURPLE, 255, 255);
+//    CRGB green  = CHSV( HUE_GREEN, 255, 255);
+//    CRGB black  = CRGB::Black;
+//    
+//    currentPalette = CRGBPalette16(
+//                                   green,  green,  black,  black,
+//                                   purple, purple, black,  black,
+//                                   green,  green,  black,  black,
+//                                   purple, purple, black,  black );
+//}
+
+
+// This example shows how to set up a static color palette
+// which is stored in PROGMEM (flash), which is almost always more
+// plentiful than RAM.  A static PROGMEM palette like this
+// takes up 64 bytes of flash.
+//const TProgmemPalette16 myRedWhiteBluePalette_p PROGMEM =
+//{
+//    CRGB::Red,
+//    CRGB::Gray, // 'white' is too bright compared to red and blue
+//    CRGB::Blue,
+//    CRGB::Black,
+//    
+//    CRGB::Red,
+//    CRGB::Gray,
+//    CRGB::Blue,
+//    CRGB::Black,
+//    
+//    CRGB::Red,
+//    CRGB::Red,
+//    CRGB::Gray,
+//    CRGB::Gray,
+//    CRGB::Blue,
+//    CRGB::Blue,
+//    CRGB::Black,
+//    CRGB::Black
+//};
+// There are several different palettes of colors demonstrated here.
+//
+// FastLED provides several 'preset' palettes: RainbowColors_p, RainbowStripeColors_p,
+// OceanColors_p, CloudColors_p, LavaColors_p, ForestColors_p, and PartyColors_p.
+//
+// Additionally, you can manually define your own color palettes, or you can write
+// code that creates color palettes on the fly.  All are shown here.
+
+//void ChangePalettePeriodically()
+//{
+//    uint8_t secondHand = (millis() / 1000) % 60;
+//    static uint8_t lastSecond = 99;
+//    
+//    if( lastSecond != secondHand) {
+//        lastSecond = secondHand;
+//        if( secondHand ==  0)  { currentPalette = RainbowColors_p;         currentBlending = LINEARBLEND; }
+//        if( secondHand == 10)  { currentPalette = RainbowStripeColors_p;   currentBlending = NOBLEND;  }
+//        if( secondHand == 15)  { currentPalette = RainbowStripeColors_p;   currentBlending = LINEARBLEND; }
+//        if( secondHand == 20)  { SetupPurpleAndGreenPalette();             currentBlending = LINEARBLEND; }
+//        if( secondHand == 25)  { SetupTotallyRandomPalette();              currentBlending = LINEARBLEND; }
+//        if( secondHand == 30)  { SetupBlackAndWhiteStripedPalette();       currentBlending = NOBLEND; }
+//        if( secondHand == 35)  { SetupBlackAndWhiteStripedPalette();       currentBlending = LINEARBLEND; }
+//        if( secondHand == 40)  { currentPalette = CloudColors_p;           currentBlending = LINEARBLEND; }
+//        if( secondHand == 45)  { currentPalette = PartyColors_p;           currentBlending = LINEARBLEND; }
+//        if( secondHand == 50)  { currentPalette = myRedWhiteBluePalette_p; currentBlending = NOBLEND;  }
+//        if( secondHand == 55)  { currentPalette = myRedWhiteBluePalette_p; currentBlending = LINEARBLEND; }
+//    }
+//}
 
 void loop() {
   // The handleClient is needed for WebServer class hosted with AutoConnect.
   // ESP-IDF Web Server component launched by the ESP32WebCam continues in a
   // separate task.
-  portal.handleClient();
-
-  // Allow CPU to switch to other tasks.
+  portal.handleClient();  
+  ftpSrvSD.handleFTP (SD_MMC);        //make sure in loop you call handleFTP()!
+  //ftpSrv.handleFTP();        //make sure in loop you call handleFTP()!!  
+  //fileserver.handleClient();
+  //fileserver_spiffs.handleClient();
+  //ChangePalettePeriodically();
+  //  
+  //  static uint8_t startIndex = 0;
+  //  startIndex = startIndex + 1; /* motion speed */
+  //  
+  //  FillLEDsFromPaletteColors( startIndex);
+  //  
+  //  FastLED.show();
+  //  FastLED.delay(1000 / UPDATES_PER_SECOND);
+  //// Allow CPU to switch to other tasks.
   delay(1);
 }
