@@ -1,3 +1,5 @@
+
+
 /*
   AutoConnect combined with ESP32 Camera Sensor.
 
@@ -43,9 +45,17 @@
 #include <SPIFFS.h>
 #include <AutoConnect.h>
 #include "ESP32WebCam.h"
+#include <ESPFtpServer.h>
+#include "SD_MMC.h"
 
 #define ACCESSPOINT_SSID "esp32timelapse01"
 #define ACCESSPOINT_PSK "12345678"
+
+#define FTP_CTRL_PORT_SD      21           // Command port on wich server is listening  
+#define FTP_DATA_PORT_PASV_SD 50009        // Data port in passive mode
+
+FtpServer ftpSrvSD(FTP_CTRL_PORT_SD, FTP_DATA_PORT_PASV_SD);   //set #define FTP_DEBUG in ESP32FtpServer.h to see ftp verbose on serial
+//FtpServer ftpSrvSD;   //set #define FTP_DEBUG in ESP32FtpServer.h to see ftp verbose on serial
 
 
 // /*****************************************************************************
@@ -74,176 +84,6 @@
 // /*****************************************************************************
 // * FAST LED Plugin
 // *****************************************************************************/
-
-
-
-/*************
- * Fileserver: http://www.iotsharing.com/2019/07/how-to-turn-esp-with-sdcard-or-spiffs-a-web-file-server.html
-  **********/
-String serverIndex = 
-  "<script src='https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js'></script>"
-  "<form method='POST' action='#' enctype='multipart/form-data' id='upload_form'>"
-      "<input type='file' name='update'>"
-      "<input type='submit' value='Upload'>"
-  "</form>"
-  "<div id='prg'>progress: 0%</div>"
-  "<script>"
-  "$('form').submit(function(e){"
-      "e.preventDefault();"
-        "var form = $('#upload_form')[0];"
-        "var data = new FormData(form);"
-        " $.ajax({"
-              "url: '/update',"
-              "type: 'POST',"               
-              "data: data,"
-              "contentType: false,"                  
-              "processData:false,"  
-              "xhr: function() {"
-                  "var xhr = new window.XMLHttpRequest();"
-                  "xhr.upload.addEventListener('progress', function(evt) {"
-                      "if (evt.lengthComputable) {"
-                          "var per = evt.loaded / evt.total;"
-                          "$('#prg').html('progress: ' + Math.round(per*100) + '%');"
-                      "}"
-                 "}, false);"
-                 "return xhr;"
-              "},"                                
-              "success:function(d, s) {"    
-                  "console.log('success!')"
-             "},"
-              "error: function (a, b, c) {"
-              "}"
-            "});"
-  "});"
-  "</script>";
-  
-WebServer fileserver (4000);
-WebServer fileserver_spiffs (5000);
-
-File root; 
-File root_spiffs;
-
-bool opened = false;
-bool opened_spiffs = false;
-
-String printDirectory(File dir, int numTabs) {
-  String response = "";
-  dir.rewindDirectory();
-  
-  while(true) {
-     File entry =  dir.openNextFile();
-     if (! entry) {
-       // no more files
-       //Serial.println("**nomorefiles**");
-       break;
-     }
-     for (uint8_t i=0; i<numTabs; i++) {
-       Serial.print('\t');   // we'll have a nice indentation
-     }
-     // Recurse for directories, otherwise print the file size
-     if (entry.isDirectory()) {
-       printDirectory(entry, numTabs+1);
-     } else {
-       response += String("<a href='") + String(entry.name()) + String("'>") + String(entry.name()) + String("</a>") + String("</br>");
-     }
-     entry.close();
-   }
-   return String("files:</br>") + response + String("</br></br> Upload file:") + serverIndex;
-}
-
-
-void handleRoot() {
-  root = SD_MMC.open("/");
-  String res = "SD-Card " + printDirectory(root, 0);
-  fileserver.send(200, "text/html", res);
-}
-
-void handleRootSpiffs() {
-  root_spiffs = SPIFFS.open("/");
-  String res = "SPIFFS " + printDirectory(root_spiffs, 0);
-  fileserver_spiffs.send(200, "text/html", res);
-}
-
-bool loadFromSDCARD(String path){
-  path.toLowerCase();
-  String dataType = "text/plain";
-  if(path.endsWith("/")) path += "index.htm";
-
-  if(path.endsWith(".src")) path = path.substring(0, path.lastIndexOf("."));
-  else if(path.endsWith(".jpg")) dataType = "image/jpeg";
-  else if(path.endsWith(".txt")) dataType = "text/plain";
-  else if(path.endsWith(".zip")) dataType = "application/zip";  
-  
-  File dataFile = SD_MMC.open(path.c_str());
-
-  if (!dataFile)
-    return false;
-  
-  if (fileserver.streamFile(dataFile, dataType) != dataFile.size()) {
-    Serial.println("Sent less data than expected!");
-  }
-
-  dataFile.close();
-  return true;
-}
-
-bool loadFromSPIFFS(String path){
-  path.toLowerCase();
-  String dataType = "text/plain";
-  if(path.endsWith("/")) path += "index.htm";
-
-  if(path.endsWith(".src")) path = path.substring(0, path.lastIndexOf("."));
-  else if(path.endsWith(".jpg")) dataType = "image/jpeg";
-  else if(path.endsWith(".txt")) dataType = "text/plain";
-  else if(path.endsWith(".zip")) dataType = "application/zip";  
-  
-  File dataFile = SPIFFS.open(path.c_str());
-  
-  if (!dataFile)
-    return false;
-  
-  if (fileserver_spiffs.streamFile(dataFile, dataType) != dataFile.size()) {
-    Serial.println("Sent less data than expected!");
-  }
-
-  dataFile.close();
-  return true;
-}
-
-void handleNotFound(){
-  if(loadFromSDCARD(fileserver.uri())) return;
-  String message = "SDCARD Not Detected\n\n";
-  message += "URI: ";
-  message += fileserver.uri();
-  message += "\nMethod: ";
-  message += (fileserver.method() == HTTP_GET)?"GET":"POST";
-  message += "\nArguments: ";
-  message += fileserver.args();
-  message += "\n";
-  for (uint8_t i=0; i<fileserver.args(); i++){
-    message += " NAME:"+fileserver.argName(i) + "\n VALUE:" + fileserver.arg(i) + "\n";
-  }
-  fileserver.send(404, "text/plain", message);
-  Serial.println(message);
-}
-
-void handleNotFoundSpiffs(){
-  if(loadFromSPIFFS(fileserver_spiffs.uri())) return;
-  String message = "SPIFFS Not Detected\n\n";
-  message += "URI: ";
-  message += fileserver_spiffs.uri();
-  message += "\nMethod: ";
-  message += (fileserver_spiffs.method() == HTTP_GET)?"GET":"POST";
-  message += "\nArguments: ";
-  message += fileserver_spiffs.args();
-  message += "\n";
-  for (uint8_t i=0; i<fileserver_spiffs.args(); i++){
-    message += " NAME:"+fileserver_spiffs.argName(i) + "\n VALUE:" + fileserver_spiffs.arg(i) + "\n";
-  }
-  fileserver_spiffs.send(404, "text/plain", message);
-  Serial.println(message);
-}
-
 
 // Image sensor settings page
 const char  CAMERA_SETUP_PAGE[] = R"*(
@@ -598,7 +438,7 @@ void handleViewPage(void) {
     return;
   }
 
-  File viewPage = SPIFFS.open(_webcamserver_html, FILE_READ);
+  File viewPage = SD_MMC.open(_webcamserver_html, FILE_READ);
   if (viewPage) {
     portalServer.streamFile(viewPage, "text/html");
     close(viewPage);
@@ -742,14 +582,11 @@ void setup() {
   // However, starting SD or SD_MMC beforehand will speed up the response to
   // saving the capture file and avoid session timeouts.
   // 
-  SD_MMC.begin(); // or SD.begin();
-  
+  if (SD_MMC.begin ())
+    Serial.println ("File system opened (" + String ("SD_MMC") + ")");
+  else
+    Serial.println ("File system could not be opened; ftp server will not work");
 
-  // Note that this sketch places the viewer HTML page in SPIFFS, so run
-  // SPIFFS.begin before starting Web Server.
-  SPIFFS.begin();
-  
-  
   // read hostname and password from SPIFFS
   //File file = SD_MMC.open("/hostname.txt");
   //if (file) {
@@ -777,12 +614,12 @@ void setup() {
   esp_err_t err = webcam.sensorInit(model);
   if (err != ESP_OK)
     Serial.printf("Camera init failed 0x%04x\n", err);
-
+ 
   // Loading the image sensor configurarion UI provided by AutoConnectAux.
   portal.load(FPSTR(CAMERA_SETUP_PAGE));
   if (portal.load(FPSTR(CAMERA_SETUP_EXEC)))
     portal.on(_setUrl, setSensor);
-
+ 
   // The various configuration settings of AutoConnect are also useful for
   // using the ESP32WebCam class.
   config.apid = ACCESSPOINT_SSID;
@@ -792,21 +629,21 @@ void setup() {
   config.reconnectInterval = 1;
   config.ota = AC_OTA_BUILTIN;
   portal.config(config);
-
+ 
   if (portal.begin()) {
     // Allow hostname.local reach in the local segment by mDNS.
     MDNS.begin(WiFi.getHostname());
     MDNS.addService("http", "tcp", 80);
     Serial.printf("AutoConnect portal %s.local started\n", WiFi.getHostname());
-
+ 
     // By configuring NTP, the timestamp appended to the capture filename will
     // be accurate. But this procedure is optional. It does not affect ESP32Cam
     // execution.
     configTzTime(_tz, _ntp1 ,_ntp2);
-
+ 
     // Activate ESP32WebCam while WiFi is connected.
     err = webcam.startCameraServer();
-
+ 
     if (err == ESP_OK) {
       // This sketch has two endpoints. One assigns the root page as the
       // entrance, and the other assigns a redirector to lead to the viewer-UI
@@ -819,70 +656,8 @@ void setup() {
     else
       Serial.printf("Camera server start failed 0x%04x\n", err);
   }
-
-  ////handle uri  
-  fileserver.on("/", handleRoot);
-  fileserver.onNotFound(handleNotFound);
-  //
-  ///*handling uploading file */
-  fileserver.on("/update", HTTP_POST, [](){
-    fileserver.sendHeader("Connection", "close");
-  },[](){
-    HTTPUpload& upload = fileserver.upload();
-    if(opened == false){
-      opened = true;
-      root = SD_MMC.open((String("/") + upload.filename).c_str(), FILE_WRITE);  
-      if(!root){
-        Serial.println("- failed to open file for writing");
-        return;
-      }
-    } 
-    if(upload.status == UPLOAD_FILE_WRITE){
-      if(root.write(upload.buf, upload.currentSize) != upload.currentSize){
-        Serial.println("- failed to write");
-        return;
-      }
-    } else if(upload.status == UPLOAD_FILE_END){
-      root.close();
-      Serial.println("UPLOAD_FILE_END");
-      opened = false;
-    }
-  });
-   
-  fileserver.begin();
-  Serial.println("HTTP SD card fileserver started");
   
-  ////handle uri  
-  fileserver_spiffs.on("/", handleRootSpiffs);
-  fileserver_spiffs.onNotFound(handleNotFoundSpiffs);
-  //
-  ///*handling uploading file */
-  fileserver_spiffs.on("/update", HTTP_POST, [](){
-    fileserver_spiffs.sendHeader("Connection", "close");
-  },[](){
-    HTTPUpload& upload = fileserver_spiffs.upload();
-    if(opened_spiffs == false){
-      opened_spiffs = true;
-      root_spiffs = SPIFFS.open((String("/") + upload.filename).c_str(), FILE_WRITE);  
-      if(!root_spiffs){
-        Serial.println("- failed to open file for writing");
-        return;
-      }
-    } 
-    if(upload.status == UPLOAD_FILE_WRITE){
-      if(root_spiffs.write(upload.buf, upload.currentSize) != upload.currentSize){
-        Serial.println("- failed to write");
-        return;
-      }
-    } else if(upload.status == UPLOAD_FILE_END){
-      root_spiffs.close();
-      Serial.println("UPLOAD_FILE_END");
-      opened_spiffs = false;
-    }
-  });
-   
-  fileserver_spiffs.begin();
-  Serial.println("HTTP SPIFFS fileserver started");
+  ftpSrvSD.begin ("esp32", "esp32");    //username, password for ftp.  set ports in ESPFtpServer.h  (default 21, 50009 for PASV)
   
 }
 
@@ -997,8 +772,10 @@ void loop() {
   // ESP-IDF Web Server component launched by the ESP32WebCam continues in a
   // separate task.
   portal.handleClient();  
-  fileserver.handleClient();
-  fileserver_spiffs.handleClient();
+  ftpSrvSD.handleFTP (SD_MMC);        //make sure in loop you call handleFTP()!
+  //ftpSrv.handleFTP();        //make sure in loop you call handleFTP()!!  
+  //fileserver.handleClient();
+  //fileserver_spiffs.handleClient();
   //ChangePalettePeriodically();
   //  
   //  static uint8_t startIndex = 0;
