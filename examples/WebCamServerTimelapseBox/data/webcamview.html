@@ -295,6 +295,16 @@ main > div {
               </ul>
             </details>
           </li>
+		  <li>
+            <details>
+              <summary>LED-Settings</summary>
+              <ul>
+                <li><label for="Red">Red [%]</label><input type="number" name="power_red" id="power_red" min="0" max="100" value="0" pattern="\d*"/></li>
+				<li><label for="Green">Green [%]</label><input type="number" name="power_green" id="power_green" min="0" max="100" value="0" pattern="\d*"/></li>
+				<li><label for="Blue">Blue [%]</label><input type="number" name="power_blue" id="power_blue" min="0" max="100" value="0" pattern="\d*"/></li>
+              </ul>
+            </details>
+          </li>
           <li><a id="setting" href="">Settings</a></li>
           <li class="small"><a id="autoconnect" href="">AutoConnect</a></li>
           <div id="status"></div>
