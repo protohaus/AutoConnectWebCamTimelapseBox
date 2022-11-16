@@ -51,6 +51,9 @@
 String esp_hostname = "esp32timelapse"; // min. 3 characters
 String esp_password = "12345678";
 
+#define MIN_LENGTH_PASSWORD 8
+#define MIN_LENGTH_HOSTNAME 6
+
 #define FTP_CTRL_PORT_SD      21           // Command port on wich server is listening  
 #define FTP_DATA_PORT_PASV_SD 50009        // Data port in passive mode
 
@@ -606,7 +609,7 @@ void setup() {
       Serial.println(s);
     }
     
-    if (v[0].length() > 5) {
+    if (v[0].length() >= MIN_LENGTH_HOSTNAME) {
       esp_hostname = v[0];
     }else
     {
@@ -637,7 +640,7 @@ void setup() {
       Serial.println(s);
     }
     
-    if (v[0].length() > 7) {
+    if (v[0].length() >= MIN_LENGTH_PASSWORD) {
       esp_password = v[0];
     }else
     {
@@ -646,28 +649,7 @@ void setup() {
       Serial.println(esp_password);
     }
   }
-  
-  
-  //if (hostname_file) {
-  //  std::vector<String> v;
-  //  while (file.available()) {
-  //    v.push_back(file.readStringUntil('\n'));
-  //  }
-  //  file.close();
-  //  
-  //  for (String s : v) {
-  //    Serial.println(s);
-  //  }
-	//
-	//  config.apid = v[0];
-	//  config.hostName = v[0]; 
-  //}else
-  //{
-  //    Serial.println("Failed to open hostname file for reading, using default values");
-  //    config.apid = ACCESSPOINT_SSID;
-  //    config.hostName = ACCESSPOINT_SSID;
-  //}
-  
+
   
   // Initialize the image sensor during the start phase of the sketch.
   esp_err_t err = webcam.sensorInit(model);
