@@ -24,12 +24,13 @@
     ESP-IDF HTTP Server documentation:
       https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/protocols/esp_http_server.html
 */
-
 #ifndef _ESP32WEBCAM_H_
 #define _ESP32WEBCAM_H_
 
 #include <memory>
 #include "ESP32Cam.h"
+#include <FastLED.h>
+#include "settings.h"
 
 // Default HTTP Server port
 #ifndef ESP32CAM_DEFAULT_HTTPPORT
@@ -52,18 +53,41 @@
 #endif // !ESP32CAM_DEFAULT_PATH_STREAM
 
 // Definition of operand for remote command to be executed by prompt handler
-#define ESP32CAM_PROMPT_OPERAND_KEY_FILENAME        "filename"
-#define ESP32CAM_PROMPT_OPERAND_KEY_FILESYSTEM      "fs"
-#define ESP32CAM_PROMPT_OPERAND_KEY_PERIOD          "period"
-#define ESP32CAM_PROMPT_OPERAND_KEY_MEMBERFUNCTION  "mf"
-#define ESP32CAM_PROMPT_OPERAND_VALUE_DISABLETIMER  "distimer"
-#define ESP32CAM_PROMPT_OPERAND_VALUE_ENABLETIMER   "entimer"
-#define ESP32CAM_PROMPT_OPERAND_VALUE_LOAD          "load"
-#define ESP32CAM_PROMPT_OPERAND_VALUE_ONESHOT       "oneshot"
-#define ESP32CAM_PROMPT_OPERAND_VALUE_SAVE          "save"
-#define ESP32CAM_PROMPT_OPERAND_VALUE_SD            "sd"
-#define ESP32CAM_PROMPT_OPERAND_VALUE_MMC           "mmc"
-#define ESP32CAM_PROMPT_OPERAND_VALUE_TIMERSHOT     "timershot"
+#define ESP32CAM_PROMPT_OPERAND_KEY_FILENAME        			"filename"
+#define ESP32CAM_PROMPT_OPERAND_KEY_FILESYSTEM      			"fs"
+#define ESP32CAM_PROMPT_OPERAND_KEY_PERIOD          			"period"
+#define ESP32CAM_PROMPT_OPERAND_KEY_MEMBERFUNCTION  			"mf"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_DISABLETIMER  			"distimer"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_ENABLETIMER   			"entimer"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_LOAD          			"load"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_ONESHOT       			"oneshot"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_SAVE          			"save"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_SD            			"sd"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_MMC           			"mmc"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_TIMERSHOT     			"timershot"
+#define ESP32CAM_PROMPT_OPERAND_KEY_RED          				"red"
+#define ESP32CAM_PROMPT_OPERAND_KEY_GREEN          				"green"
+#define ESP32CAM_PROMPT_OPERAND_KEY_BLUE          				"blue"
+#define ESP32CAM_PROMPT_OPERAND_KEY_BRIGHTNESS                  "brightness"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_LED_SETTINGS				"ledSettings"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_POWER_ON	    			"powerOn"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_POWER_OFF	    			"powerOff"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_AUTOMATION_ON	        	"automationOn"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_AUTOMATION_OFF	       	"automationOff"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_RED	    				"red"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_GREEN	    				"green"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_BLUE	    				"blue"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_LIGHTBLUE	    			"lightblue"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_YELLOW	    			"yellow"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_ORANGE	    			"orange"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_WHITE	    				"white"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_BROWN	    				"brown"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_BLACK	    				"black"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_GREY	    				"grey"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_BRIGHTNESS25	    	    "brightness25"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_BRIGHTNESS50	    	    "brightness50"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_BRIGHTNESS75	    	    "brightness75"
+#define ESP32CAM_PROMPT_OPERAND_VALUE_BRIGHTNESS100	    	    "brightness100"
 
 class ESP32WebCam {
  public:
@@ -91,6 +115,8 @@ class ESP32WebCam {
   esp_err_t startCameraServer(const char* streamPath, const char* capturePath, const char* promptPath) { return startCameraServer(streamPath, capturePath, promptPath, _port); }
   esp_err_t startCameraServer(const char* streamPath, const char* capturePath, const char* promptPath, const uint16_t port);
   void      stopCameraServer(void);
+
+  static void _initFastLED();
 
  protected:
   static esp_err_t _captureHandler(httpd_req_t* req);

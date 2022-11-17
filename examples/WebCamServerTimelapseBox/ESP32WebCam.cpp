@@ -29,13 +29,22 @@
 #include <SD.h>
 #include <SD_MMC.h>
 #include "ESP32WebCam.h"
+#include <FastLED.h>
 
 namespace ESP32WebCam_internal {
 
 ESP32WebCam*  esp32webcam = nullptr;
-
+CRGB leds[NUM_LEDS];
+CRGB currentColor = CRGB::White;
+bool power = true;
 };
 
+void ESP32WebCam::_initFastLED() {
+  FastLED.addLeds<LED_TYPE, DATA_PIN, COLOR_ORDER>(ESP32WebCam_internal::leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
+  FastLED.setMaxPowerInVoltsAndMilliamps(5, MILLI_AMPS);
+  FastLED.setBrightness(INITIAL_BRIGHTNESS);
+}
+  
 // The ESP32Cam class is for streaming image data captured by ESP32-CAM on the
 // Arduino framework via HTTP-based real-time transfer and uses one of the MIMEs,
 // multipart/x-mixed-replace. https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html
@@ -324,19 +333,35 @@ esp_err_t ESP32WebCam::_promptHandler(httpd_req_t* req) {
       char  fs[6] = { '\0', };
       char  filename[128] = { '\0', };
       char  period[13] = { '\0', };
-
+	  char  red[10] = { '\0', };
+	  //char  green[13] = { '\0', };
+	  //char  blue[13] = { '\0', };
+	  //char  brightness[13] = { '\0', };
+	  
       httpd_query_key_value(query, ESP32CAM_PROMPT_OPERAND_KEY_MEMBERFUNCTION, mf, sizeof(mf));
       httpd_query_key_value(query, ESP32CAM_PROMPT_OPERAND_KEY_FILESYSTEM, fs, sizeof(fs));
       httpd_query_key_value(query, ESP32CAM_PROMPT_OPERAND_KEY_FILENAME, filename, sizeof(filename));
       httpd_query_key_value(query, ESP32CAM_PROMPT_OPERAND_KEY_PERIOD, period, sizeof(period));
+      httpd_query_key_value(query, ESP32CAM_PROMPT_OPERAND_KEY_RED, red, sizeof(red));
+      //httpd_query_key_value(query, ESP32CAM_PROMPT_OPERAND_KEY_GREEN, green, sizeof(green));
+      //httpd_query_key_value(query, ESP32CAM_PROMPT_OPERAND_KEY_BLUE, blue, sizeof(blue));
+      //httpd_query_key_value(query, ESP32CAM_PROMPT_OPERAND_KEY_BRIGHTNESS, brightness, sizeof(brightness));
 
       // Parse query parameters and invoke the specified command
       if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_ONESHOT, mf)) {
         if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_MMC, fs) || !strlen(fs))
+		{
+		  //power = 1;
           rc = ESP32WebCam_internal::esp32webcam->_esp32cam.get()->oneShot(SD_MMC, filename);
+		  //power = 0;
+		}
         else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_SD, fs))
+		{
+		  //power = 1;
           rc = ESP32WebCam_internal::esp32webcam->_esp32cam.get()->oneShot(SD, filename);
-        else
+          //power = 0;
+		}
+		else
           rc = ESP_ERR_INVALID_ARG;
       }
       else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_TIMERSHOT, mf)) {
@@ -362,6 +387,168 @@ esp_err_t ESP32WebCam::_promptHandler(httpd_req_t* req) {
       else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_SAVE, mf)) {
         rc = ESP32WebCam_internal::esp32webcam->_esp32cam.get()->saveSettings();
       }
+	  else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_LED_SETTINGS, mf)) {
+		//int nRed = atoi(red);
+		//unsigned long nGreen = atol(green);
+		//unsigned long nBlue = atol(blue);
+		//unsigned long nBrightness = atol(brightness);
+        
+        //FastLED.setBrightness(nBrightness);
+		//ESP32WebCam_internal::currentColor = CRGB::Red;
+		//
+		//if(ESP32WebCam_internal::power)
+		//	fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, ESP32WebCam_internal::currentColor);
+		//else
+		//	fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, CRGB::Black);
+		//
+        //FastLED.show();
+ 		rc = ESP_OK;
+      }
+	  else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_POWER_ON, mf)) {
+	    ESP32WebCam_internal::power = true;
+        fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, ESP32WebCam_internal::currentColor);
+		FastLED.show();
+		rc = ESP_OK;
+      }
+	  else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_POWER_OFF, mf)) {
+		ESP32WebCam_internal::power = false;
+        fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, CRGB::Black);
+		FastLED.show();
+		rc = ESP_OK;
+      }
+	  else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_AUTOMATION_ON, mf)) {
+		 rc = ESP_OK;
+      }
+	  else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_AUTOMATION_OFF, mf)) {
+	    rc = ESP_OK;
+      }
+	  else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_RED, mf)) {
+        ESP32WebCam_internal::currentColor = CRGB::Red;
+		if (ESP32WebCam_internal::power)
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, ESP32WebCam_internal::currentColor);
+		else
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, CRGB::Black);
+		FastLED.show();
+		 rc = ESP_OK;
+      }
+	  else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_BLUE, mf)) {
+        ESP32WebCam_internal::currentColor = CRGB::Blue;
+		if (ESP32WebCam_internal::power)
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, ESP32WebCam_internal::currentColor);
+		else
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, CRGB::Black);
+		FastLED.show();
+		 rc = ESP_OK;
+      }
+	  else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_GREEN, mf)) {
+        ESP32WebCam_internal::currentColor = CRGB::Green;
+		if (ESP32WebCam_internal::power)
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, ESP32WebCam_internal::currentColor);
+		else
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, CRGB::Black);
+		FastLED.show();
+		 rc = ESP_OK;
+      }
+	  else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_LIGHTBLUE, mf)) {
+        ESP32WebCam_internal::currentColor = CRGB::LightBlue;
+		if (ESP32WebCam_internal::power)
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, ESP32WebCam_internal::currentColor);
+		else
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, CRGB::Black);
+		FastLED.show();
+		 rc = ESP_OK;
+      }
+	  else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_YELLOW, mf)) {
+        ESP32WebCam_internal::currentColor = CRGB::Yellow;
+		if (ESP32WebCam_internal::power)
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, ESP32WebCam_internal::currentColor);
+		else
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, CRGB::Black);
+		FastLED.show();
+		 rc = ESP_OK;
+      }
+	  else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_ORANGE, mf)) {
+        ESP32WebCam_internal::currentColor = CRGB::Orange;
+		if (ESP32WebCam_internal::power)
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, ESP32WebCam_internal::currentColor);
+		else
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, CRGB::Black);
+		FastLED.show();
+		 rc = ESP_OK;
+      }
+	  else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_BLACK, mf)) {
+        ESP32WebCam_internal::currentColor = CRGB::Black;
+		if (ESP32WebCam_internal::power)
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, ESP32WebCam_internal::currentColor);
+		else
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, CRGB::Black);
+		FastLED.show();
+		 rc = ESP_OK;
+      }
+	  else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_WHITE, mf)) {
+        ESP32WebCam_internal::currentColor = CRGB::White;
+		if (ESP32WebCam_internal::power)
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, ESP32WebCam_internal::currentColor);
+		else
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, CRGB::Black);
+		FastLED.show();
+		 rc = ESP_OK;
+      }
+	  else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_BROWN, mf)) {
+        ESP32WebCam_internal::currentColor = CRGB::Brown;
+		if (ESP32WebCam_internal::power)
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, ESP32WebCam_internal::currentColor);
+		else
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, CRGB::Black);
+		FastLED.show();
+		 rc = ESP_OK;
+      }
+	  else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_GREY, mf)) {
+        ESP32WebCam_internal::currentColor = CRGB::Grey;
+		if (ESP32WebCam_internal::power)
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, ESP32WebCam_internal::currentColor);
+		else
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, CRGB::Black);
+		FastLED.show();
+		 rc = ESP_OK;
+      }
+	  else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_BRIGHTNESS25, mf)) {
+		FastLED.setBrightness(255*0.25);  
+		if (ESP32WebCam_internal::power)
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, ESP32WebCam_internal::currentColor);
+		else
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, CRGB::Black);
+		FastLED.show();
+		 rc = ESP_OK;
+      }
+	  else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_BRIGHTNESS50, mf)) {
+		FastLED.setBrightness(255*0.5);  
+		if (ESP32WebCam_internal::power)
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, ESP32WebCam_internal::currentColor);
+		else
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, CRGB::Black);
+		FastLED.show();
+		 rc = ESP_OK;
+      }
+	  else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_BRIGHTNESS75, mf)) {
+		FastLED.setBrightness(255*0.75);  
+		if (ESP32WebCam_internal::power)
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, ESP32WebCam_internal::currentColor);
+		else
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, CRGB::Black);
+		FastLED.show();
+		 rc = ESP_OK;
+      }
+	  else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_BRIGHTNESS100, mf)) {
+		FastLED.setBrightness(255*1.0);  
+		if (ESP32WebCam_internal::power)
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, ESP32WebCam_internal::currentColor);
+		else
+			fill_solid(ESP32WebCam_internal::leds, NUM_LEDS, CRGB::Black);
+		FastLED.show();
+		 rc = ESP_OK;
+      }
+	  
       else {
         rc = ESP_ERR_NOT_SUPPORTED;
       }
