@@ -299,13 +299,26 @@ main > div {
             <details>
               <summary>LED-Settings</summary>
               <ul>
-                <li><label for="Red">Red [%]</label><input type="number" name="power_red" id="power_red" min="0" max="100" value="0" pattern="\d*"/></li>
-				<li><label for="Green">Green [%]</label><input type="number" name="power_green" id="power_green" min="0" max="100" value="0" pattern="\d*"/></li>
-				<li><label for="Blue">Blue [%]</label><input type="number" name="power_blue" id="power_blue" min="0" max="100" value="0" pattern="\d*"/></li>
-              </ul>
+            <!--    <li><label for="Red">Red</label><input type="number" name="Red" id="red" min="0" max="255" value="0" pattern="\d*" oninput="this.nextElementSibling.value = this.value" /><output>0</output></li>         -->
+			<!--	<li><label for="Green">Green</label><input type="number" name="Green" id="green" min="0" max="255" value="0" pattern="\d*" oninput="this.nextElementSibling.value = this.value" /><output>0</output></li> -->
+			<!--	<li><label for="Blue">Blue</label><input type="number" name="Blue" id="blue" min="0" max="255" value="0" pattern="\d*" oninput="this.nextElementSibling.value = this.value" /><output>0</output></li>     -->	
+			<!--	<li><input type="button" value="SET" onclick="ledSettings()"/> -->
+				<li><input type="button" value="red" onclick="red()" style="background-color:red"/>
+				<li><input type="button" value="orange" onclick="orange()" style="background-color:orange"/>
+				<li><input type="button" value="yellow" onclick="yellow()" style="background-color:yellow"/>
+				<li><input type="button" value="green" onclick="green()" style="background-color:green"/>
+				<li><input type="button" value="blue" onclick="blue()" style="background-color:blue"/>
+				<li><input type="button" value="lightblue" onclick="lightblue()" style="background-color:lightblue"/>
+				<li><input type="button" value="white" onclick="white()" style="background-color:white"/>
+				<li><input type="button" value="black" onclick="black()" style="background-color:black"/>
+				<li><input type="button" value="grey" onclick="grey()" style="background-color:grey"/>
+				<li><input type="button" value="brown" onclick="brown()" style="background-color:brown"/>
+				<li><label for="Int">Int.</label><input type="button" value="25" onclick="brightness25()" /><input type="button" value="50" onclick="brightness75()" /><input type="button" value="75" onclick="brightness75()" /><input type="button" value="100" onclick="brightness100()" /></li>
+				<li><label for="Power">Power</label><input type="button" value="ON" onclick="led_on()"/><input type="button" value="OFF" onclick="led_off()"/></li>
+                <li><label for="Automation">Automation</label><input type="button" value="ON" onclick="led_automation_on()"/><input type="button" value="OFF" onclick="led_automation_off()"/></li>
+			  </ul>
             </details>
-          </li>
-          <li><a id="setting" href="">Settings</a></li>
+			<li><a id="setting" href="">Settings</a></li>
           <li class="small"><a id="autoconnect" href="">AutoConnect</a></li>
           <div id="status"></div>
         </ul>
@@ -396,7 +409,113 @@ main > div {
       promptUrl.search = "?mf=distimer";
       prompt(promptUrl);
     }
-
+	
+	function ledSettings() {
+	  //promptUrl.search = "?mf=ledSettings&red="; + document.getElementById('red').value + "&green=" + document.getElementById('green').value + "&blue=" + document.getElementById('blue').value;
+	  promptUrl.search = "?mf=ledSettings&red="; + document.getElementById('red').value;
+	  prompt(promptUrl);
+	}
+	
+	function led_on() {
+	  promptUrl.search = "?mf=powerOn";
+	  prompt(promptUrl); 
+	}
+	
+	function led_off() {
+	  promptUrl.search = "?mf=powerOff";
+	  prompt(promptUrl); 
+	}
+	
+	function led_automation_on() {
+	  promptUrl.search = "?mf=automationOn";
+	  prompt(promptUrl); 
+	}
+	
+	function led_automation_off() {
+	  promptUrl.search = "?mf=automationOff";
+	  prompt(promptUrl); 
+	}
+	
+	function red() {
+	  promptUrl.search = "?mf=red";
+	  prompt(promptUrl); 
+	}
+	
+	function green() {
+	  promptUrl.search = "?mf=green";
+	  prompt(promptUrl); 
+	}
+	
+	function blue() {
+	  promptUrl.search = "?mf=blue";
+	  prompt(promptUrl); 
+	}
+	
+	function lightblue() {
+	  promptUrl.search = "?mf=lightblue";
+	  prompt(promptUrl); 
+	}
+	
+	function yellow() {
+	  promptUrl.search = "?mf=yellow";
+	  prompt(promptUrl); 
+	}
+	
+	function orange() {
+	  promptUrl.search = "?mf=orange";
+	  prompt(promptUrl); 
+	}
+	
+	function white() {
+	  promptUrl.search = "?mf=white";
+	  prompt(promptUrl); 
+	}
+	
+	function black() {
+	  promptUrl.search = "?mf=black";
+	  prompt(promptUrl); 
+	}
+	
+	function grey() {
+	  promptUrl.search = "?mf=grey";
+	  prompt(promptUrl); 
+	}
+	
+	function brown() {
+	  promptUrl.search = "?mf=brown";
+	  prompt(promptUrl); 
+	}
+	
+	function brightness25() {
+	  promptUrl.search = "?mf=brightness25";
+	  prompt(promptUrl); 
+	}
+	
+	function brightness50() {
+	  promptUrl.search = "?mf=brightness50";
+	  prompt(promptUrl); 
+	}
+	
+	function brightness75() {
+	  promptUrl.search = "?mf=brightness75";
+	  prompt(promptUrl); 
+	}
+	
+	function brightness100() {
+	  promptUrl.search = "?mf=brightness100";
+	  prompt(promptUrl); 
+	}
+	
+	function save() {
+	  promptUrl.search = "?mf=save";
+	  prompt(promptUrl); 
+	}
+    
+	function load() {
+	  promptUrl.search = "?mf=load";
+	  prompt(promptUrl); 
+	}
+	
     // Make an actual URL that aims to the ESP32WebCam instance.
     function endpoint(host, path, port) {
       var url = new URL(path, "http://" + host);

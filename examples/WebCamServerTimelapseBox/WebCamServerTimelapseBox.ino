@@ -47,44 +47,18 @@
 #include "ESP32WebCam.h"
 #include "src/ESPFtpServer/ESPFtpServer.h"
 #include "SD_MMC.h"
+#include <FastLED.h>
+#include <EEPROM.h>
+#include "settings.h"
 
-String esp_hostname = "esp32timelapse"; // min. 3 characters
-String esp_password = "12345678";
+#if defined(FASTLED_VERSION) && (FASTLED_VERSION < 3003000)
+#warning "Requires FastLED 3.3 or later; check github for latest code."
+#endif
 
-#define MIN_LENGTH_PASSWORD 8
-#define MIN_LENGTH_HOSTNAME 6
-
-#define FTP_CTRL_PORT_SD      21           // Command port on wich server is listening  
-#define FTP_DATA_PORT_PASV_SD 50009        // Data port in passive mode
+String esp_hostname = ESP_HOSTNAME; // min. 3 characters
+String esp_password = ESP_PASSWORD;
 
 FtpServer ftpSrvSD(FTP_CTRL_PORT_SD, FTP_DATA_PORT_PASV_SD);   //set #define FTP_DEBUG in ESP32FtpServer.h to see ftp verbose on serial
-
-// /*****************************************************************************
-// * FAST LED Plugin
-// *****************************************************************************/
-//  
-// #include <FastLED.h>
-// #define LED_PIN     3
-// #define NUM_LEDS    13
-// #define BRIGHTNESS  64
-// #define LED_TYPE    WS2812
-// #define COLOR_ORDER GRB
-// CRGB leds[NUM_LEDS];
-// 
-// #define UPDATES_PER_SECOND 100
-// 
-// CRGBPalette16 currentPalette;
-// TBlendType    currentBlending;
-// 
-// extern CRGBPalette16 myRedWhiteBluePalette;
-// extern const TProgmemPalette16 myRedWhiteBluePalette_p PROGMEM;
-// 
-// //#include "soc/soc.h" //disable brownout problems
-// //#include "soc/rtc_cntl_reg.h"  //disable brownout problems
-// 
-// /*****************************************************************************
-// * FAST LED Plugin
-// *****************************************************************************/
 
 // Image sensor settings page
 const char  CAMERA_SETUP_PAGE[] = R"*(
@@ -564,25 +538,12 @@ String setSensor(AutoConnectAux& aux, PageArgument& args) {
 }
 
 void setup() {
+
+
   delay(1000);
   Serial.begin(115200);
   Serial.println();
 
-  //FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection( TypicalLEDStrip );
-  //FastLED.setBrightness(  BRIGHTNESS );
-  //  
-  //currentPalette = RainbowColors_p;
-  //currentBlending = LINEARBLEND;
-
-  //WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0); //disable brownout detector
-  
-  // Start SD or SD_MMC to save the captured image to the SD card equipped with
-  // the ESP32-CAM module. SD.begin() or SD_MMC.begin() does not need to be
-  // stated explicitly; the ESP32Cam class will internally detect the SD card
-  // mount status and automatically start SD or SD_MMC if it is not mounted.
-  // However, starting SD or SD_MMC beforehand will speed up the response to
-  // saving the capture file and avoid session timeouts.
-  // 
   if (SD_MMC.begin ())
     Serial.println ("File system opened (" + String ("SD_MMC") + ")");
   else
@@ -700,132 +661,15 @@ void setup() {
   
   ftpSrvSD.begin (esp_hostname, esp_password.c_str());    //username, password for ftp.  set ports in ESPFtpServer.h  (default 21, 50009 for PASV)
   
+  ESP32WebCam::_initFastLED();
 }
-
-//void FillLEDsFromPaletteColors( uint8_t colorIndex)
-//{
-//    uint8_t brightness = 255;
-//    
-//    for( int i = 0; i < NUM_LEDS; ++i) {
-//        leds[i] = ColorFromPalette( currentPalette, colorIndex, brightness, currentBlending);
-//        colorIndex += 3;
-//    }
-//}
-
-
-
-
-// This function fills the palette with totally random colors.
-//void SetupTotallyRandomPalette()
-//{
-//    for( int i = 0; i < 16; ++i) {
-//        currentPalette[i] = CHSV( random8(), 255, random8());
-//    }
-//}
-
-// This function sets up a palette of black and white stripes,
-// using code.  Since the palette is effectively an array of
-// sixteen CRGB colors, the various fill_* functions can be used
-// to set them up.
-//void SetupBlackAndWhiteStripedPalette()
-//{
-//    // 'black out' all 16 palette entries...
-//    fill_solid( currentPalette, 16, CRGB::Black);
-//    // and set every fourth one to white.
-//    currentPalette[0] = CRGB::White;
-//    currentPalette[4] = CRGB::White;
-//    currentPalette[8] = CRGB::White;
-//    currentPalette[12] = CRGB::White;
-//    
-//}
-
-// This function sets up a palette of purple and green stripes.
-//void SetupPurpleAndGreenPalette()
-//{
-//    CRGB purple = CHSV( HUE_PURPLE, 255, 255);
-//    CRGB green  = CHSV( HUE_GREEN, 255, 255);
-//    CRGB black  = CRGB::Black;
-//    
-//    currentPalette = CRGBPalette16(
-//                                   green,  green,  black,  black,
-//                                   purple, purple, black,  black,
-//                                   green,  green,  black,  black,
-//                                   purple, purple, black,  black );
-//}
-
-
-// This example shows how to set up a static color palette
-// which is stored in PROGMEM (flash), which is almost always more
-// plentiful than RAM.  A static PROGMEM palette like this
-// takes up 64 bytes of flash.
-//const TProgmemPalette16 myRedWhiteBluePalette_p PROGMEM =
-//{
-//    CRGB::Red,
-//    CRGB::Gray, // 'white' is too bright compared to red and blue
-//    CRGB::Blue,
-//    CRGB::Black,
-//    
-//    CRGB::Red,
-//    CRGB::Gray,
-//    CRGB::Blue,
-//    CRGB::Black,
-//    
-//    CRGB::Red,
-//    CRGB::Red,
-//    CRGB::Gray,
-//    CRGB::Gray,
-//    CRGB::Blue,
-//    CRGB::Blue,
-//    CRGB::Black,
-//    CRGB::Black
-//};
-// There are several different palettes of colors demonstrated here.
-//
-// FastLED provides several 'preset' palettes: RainbowColors_p, RainbowStripeColors_p,
-// OceanColors_p, CloudColors_p, LavaColors_p, ForestColors_p, and PartyColors_p.
-//
-// Additionally, you can manually define your own color palettes, or you can write
-// code that creates color palettes on the fly.  All are shown here.
-
-//void ChangePalettePeriodically()
-//{
-//    uint8_t secondHand = (millis() / 1000) % 60;
-//    static uint8_t lastSecond = 99;
-//    
-//    if( lastSecond != secondHand) {
-//        lastSecond = secondHand;
-//        if( secondHand ==  0)  { currentPalette = RainbowColors_p;         currentBlending = LINEARBLEND; }
-//        if( secondHand == 10)  { currentPalette = RainbowStripeColors_p;   currentBlending = NOBLEND;  }
-//        if( secondHand == 15)  { currentPalette = RainbowStripeColors_p;   currentBlending = LINEARBLEND; }
-//        if( secondHand == 20)  { SetupPurpleAndGreenPalette();             currentBlending = LINEARBLEND; }
-//        if( secondHand == 25)  { SetupTotallyRandomPalette();              currentBlending = LINEARBLEND; }
-//        if( secondHand == 30)  { SetupBlackAndWhiteStripedPalette();       currentBlending = NOBLEND; }
-//        if( secondHand == 35)  { SetupBlackAndWhiteStripedPalette();       currentBlending = LINEARBLEND; }
-//        if( secondHand == 40)  { currentPalette = CloudColors_p;           currentBlending = LINEARBLEND; }
-//        if( secondHand == 45)  { currentPalette = PartyColors_p;           currentBlending = LINEARBLEND; }
-//        if( secondHand == 50)  { currentPalette = myRedWhiteBluePalette_p; currentBlending = NOBLEND;  }
-//        if( secondHand == 55)  { currentPalette = myRedWhiteBluePalette_p; currentBlending = LINEARBLEND; }
-//    }
-//}
-
 void loop() {
   // The handleClient is needed for WebServer class hosted with AutoConnect.
   // ESP-IDF Web Server component launched by the ESP32WebCam continues in a
   // separate task.
   portal.handleClient();  
   ftpSrvSD.handleFTP (SD_MMC);        //make sure in loop you call handleFTP()!
-  //ftpSrv.handleFTP();        //make sure in loop you call handleFTP()!!  
-  //fileserver.handleClient();
-  //fileserver_spiffs.handleClient();
-  //ChangePalettePeriodically();
-  //  
-  //  static uint8_t startIndex = 0;
-  //  startIndex = startIndex + 1; /* motion speed */
-  //  
-  //  FillLEDsFromPaletteColors( startIndex);
-  //  
-  //  FastLED.show();
-  //  FastLED.delay(1000 / UPDATES_PER_SECOND);
+
   //// Allow CPU to switch to other tasks.
   delay(1);
 }
