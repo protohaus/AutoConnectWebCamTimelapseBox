@@ -49,7 +49,6 @@
 #include "SD_MMC.h"
 #include <FastLED.h>
 #include <EEPROM.h>
-#include "settings.h"
 
 #if defined(FASTLED_VERSION) && (FASTLED_VERSION < 3003000)
 #warning "Requires FastLED 3.3 or later; check github for latest code."
@@ -662,6 +661,8 @@ void setup() {
   ftpSrvSD.begin (esp_hostname, esp_password.c_str());    //username, password for ftp.  set ports in ESPFtpServer.h  (default 21, 50009 for PASV)
   
   ESP32WebCam::_initFastLED();
+  //ESP32WebCam::_showLED();
+ 
 }
 void loop() {
   // The handleClient is needed for WebServer class hosted with AutoConnect.
@@ -669,7 +670,7 @@ void loop() {
   // separate task.
   portal.handleClient();  
   ftpSrvSD.handleFTP (SD_MMC);        //make sure in loop you call handleFTP()!
-
+		
   //// Allow CPU to switch to other tasks.
   delay(1);
 }

@@ -21,6 +21,8 @@
 #include <img_converters.h>
 #include "ESP32Cam.h"
 #include "ESP32Cam_pins.h"
+//#include <FastLED.h>
+
 
 // The interrupt handler for the timer shot uses a static Mutex and a pointer
 // to an ESP32Cam instance.
@@ -28,8 +30,12 @@ namespace ESP32Cam_internal {
 
 ESP32Cam* esp32cam;
 volatile  SemaphoreHandle_t xMutex = NULL;
-
+//CRGB leds[NUM_LEDS];
+//CRGB currentColor = CRGB::White;
+//bool power = true;
+//bool automation = false;
 };
+
 
 // Name of a dummy file to check if the file system is mounted.
 const char ESP32Cam::_mountProbe[]= { ESP32CAM_FS_MOUNTPROBE };
@@ -39,6 +45,7 @@ const char ESP32Cam::_mountProbe[]= { ESP32CAM_FS_MOUNTPROBE };
  */
 ESP32Cam::ESP32Cam() : _sdFile(nullptr), _mounted(MOUNT_NONE), _cameraId(CAMERA_MODEL_UNKNOWN), _pins(nullptr), _sensor(nullptr), _hwTimer(nullptr) {
   ESP32Cam_internal::esp32cam = nullptr;
+  _initFastLED();
 }
 
 /**
@@ -869,4 +876,24 @@ void ESP32Cam::_purgeTimer(void) {
       deq();
     }
   }
+}
+
+void ESP32Cam::_initFastLED() {
+  FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
+  FastLED.setMaxPowerInVoltsAndMilliamps(5, MILLI_AMPS);
+  FastLED.setBrightness(MAX_BRIGHTNESS);
+}
+
+void ESP32Cam::_showLED() {
+  
+  if (power)
+	  fill_solid(leds, NUM_LEDS, currentColor);
+  else
+	  fill_solid(leds, NUM_LEDS, CRGB::Black);
+  FastLED.show();
+}
+
+void ESP32Cam::_setBrightness(float brightness_) {
+  brightness = brightness_;
+  FastLED.setBrightness(MAX_BRIGHTNESS * brightness);
 }

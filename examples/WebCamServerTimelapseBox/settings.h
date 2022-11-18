@@ -7,14 +7,16 @@
 #define FTP_CTRL_PORT_SD      21           // Command port on wich server is listening  
 #define FTP_DATA_PORT_PASV_SD 50009        // Data port in passive mode
 
-#define ARRAY_SIZE(A) (sizeof(A) / sizeof((A)[0]))
+//#define ARRAY_SIZE(A) (sizeof(A) / sizeof((A)[0]))
 
-#define DATA_PIN    3
+//#define DATA_PIN    3
 //#define CLK_PIN   4
 #define LED_TYPE    WS2812
+#define LED_PIN 3
 #define COLOR_ORDER GRB
 #define NUM_LEDS 1
-#define INITIAL_BRIGHTNESS 255
+#define MAX_BRIGHTNESS 255
+#define INITIAL_BRIGHTNESS_PERCENTAGE 1.0
 
 #define MILLI_AMPS         1600 // IMPORTANT: set the max milli-Amps of your power supply (4A = 4000mA)
 #define FRAMES_PER_SECOND  120

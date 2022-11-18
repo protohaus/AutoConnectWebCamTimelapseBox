@@ -30,7 +30,6 @@
 #include <memory>
 #include "ESP32Cam.h"
 #include <FastLED.h>
-#include "settings.h"
 
 // Default HTTP Server port
 #ifndef ESP32CAM_DEFAULT_HTTPPORT
@@ -117,7 +116,12 @@ class ESP32WebCam {
   void      stopCameraServer(void);
 
   static void _initFastLED();
-
+  static void _showLED();
+  static void _setPower(bool power_);
+  static void _setColor(CRGB color_);
+  static void _setBrightness(float brightness_);
+  static void _setAutomation(bool automation_);
+  
  protected:
   static esp_err_t _captureHandler(httpd_req_t* req);
   static esp_err_t _promptHandler(httpd_req_t* req);

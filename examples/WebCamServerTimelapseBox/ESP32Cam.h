@@ -23,6 +23,8 @@
 #include <esp32-hal-timer.h>
 #include <SD.h>
 #include <SD_MMC.h>
+#include "settings.h"
+#include <FastLED.h>
 
 // The type of hardware timer used by the timer shot
 #ifndef ESP32CAM_OCCUPIED_TIMER
@@ -98,7 +100,17 @@ class ESP32Cam {
   void      enableTimerShot(void);
   static void deq(void);
   static portBASE_TYPE  enq(TickType_t ms);
+  
+  void _initFastLED();
+  void _showLED();
+  void _setBrightness(float brightness_);
 
+  CRGB leds[NUM_LEDS];
+  CRGB currentColor{CRGB::White};
+  float brightness{INITIAL_BRIGHTNESS_PERCENTAGE};
+  bool power{true};
+  bool automation{false};
+  
  protected:
   typedef enum {
     MOUNT_NONE,
