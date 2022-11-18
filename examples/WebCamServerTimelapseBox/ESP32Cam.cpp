@@ -641,6 +641,11 @@ void ESP32Cam::_timerShotTask(void* pvParametes) {
     // Temporarily stop the timer during execution to suppress task overlap.
     timerStop(esp32cam->_hwTimer);
 
+    if(esp32cam->automation){
+      esp32cam->_setPower(true);
+      esp32cam->_showLED();
+      delay(LED_DELAY);
+    }
     // Assemble the file name of the destination of the captured image.
     char  fn[esp32cam->_captureName.length() + sizeof('\0') + 20];
     strcpy(fn, esp32cam->_captureName.c_str());
@@ -648,7 +653,11 @@ void ESP32Cam::_timerShotTask(void* pvParametes) {
 
     // Capture and export to SD
     esp32cam->_export(fn, nullptr);
-
+    if(esp32cam->automation){
+      esp32cam->_setPower(false);
+      esp32cam->_showLED();
+    }
+    
     // Release the resource and restart the timer increment.
     timerStart(esp32cam->_hwTimer);
     deq();
@@ -896,4 +905,8 @@ void ESP32Cam::_showLED() {
 void ESP32Cam::_setBrightness(float brightness_) {
   brightness = brightness_;
   FastLED.setBrightness(MAX_BRIGHTNESS * brightness);
+}
+
+void ESP32Cam::_setPower(bool power_) {
+  power = power_;
 }

@@ -104,7 +104,8 @@ class ESP32Cam {
   void _initFastLED();
   void _showLED();
   void _setBrightness(float brightness_);
-
+  void _setPower(bool power_);
+  
   CRGB leds[NUM_LEDS];
   CRGB currentColor{CRGB::White};
   float brightness{INITIAL_BRIGHTNESS_PERCENTAGE};
