@@ -1,8 +1,9 @@
-#define ESP_HOSTNAME "esp32timelapse" 
-#define ESP_PASSWORD "12345678"
+#include "secrets.h"
 
 #define MIN_LENGTH_PASSWORD 8
+#define MAX_LENGTH_PASSWORD 20
 #define MIN_LENGTH_HOSTNAME 6
+#define MAX_LENGTH_HOSTNAME 20
 
 #define FTP_CTRL_PORT_SD      21           // Command port on wich server is listening  
 #define FTP_DATA_PORT_PASV_SD 50009        // Data port in passive mode

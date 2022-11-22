@@ -49,6 +49,9 @@
 #include "SD_MMC.h"
 #include <FastLED.h>
 #include <EEPROM.h>
+#include <UniversalTelegramBot.h>
+#include <ArduinoJson.h>
+#include "settings.h"
 
 #if defined(FASTLED_VERSION) && (FASTLED_VERSION < 3003000)
 #warning "Requires FastLED 3.3 or later; check github for latest code."
@@ -57,7 +60,75 @@
 String esp_hostname = ESP_HOSTNAME; // min. 3 characters
 String esp_password = ESP_PASSWORD;
 
+// Initialize Telegram BOT
+String BOTtoken = TELEGRAM_BOT_TOKEN;  // your Bot Token (Get from Botfather)
+
+// Use @myidbot to find out the chat ID of an individual or a group
+// Also note that you need to click "start" on a bot before it can
+// message you
+String CHAT_ID = TELEGRAM_CHAT_ID;
+
+bool sendPhoto = false;
+WiFiClientSecure clientTCP;
+UniversalTelegramBot bot(BOTtoken, clientTCP);
+
+//Checks for new messages every 1 second.
+int botRequestDelay = 1000;
+unsigned long lastTimeBotRan;
+
+
 FtpServer ftpSrvSD(FTP_CTRL_PORT_SD, FTP_DATA_PORT_PASV_SD);   //set #define FTP_DEBUG in ESP32FtpServer.h to see ftp verbose on serial
+
+// Handle what happens when you receive new messages
+void handleNewMessages(int numNewMessages) {
+  Serial.println("handleNewMessages");
+  Serial.println(String(numNewMessages));
+
+  for (int i=0; i<numNewMessages; i++) {
+    // Chat id of the requester
+    String chat_id = String(bot.messages[i].chat_id);
+    if (chat_id != CHAT_ID){
+      bot.sendMessage(chat_id, "Unauthorized user", "");
+      continue;
+    }
+    
+    // Print the received message
+    String text = bot.messages[i].text;
+    Serial.println(text);
+
+    String from_name = bot.messages[i].from_name;
+
+    if (text == "/start") {
+      String welcome = "Welcome, " + from_name + ".\n";
+      welcome += "Use the following commands to control your outputs.\n\n";
+      welcome += "/led_on to turn GPIO ON \n";
+      welcome += "/led_off to turn GPIO OFF \n";
+      welcome += "/state to request current GPIO state \n";
+      bot.sendMessage(chat_id, welcome, "");
+    }
+
+    if (text == "/led_on") {
+      bot.sendMessage(chat_id, "LED state set to ON", "");
+      //ledState = HIGH;
+      //digitalWrite(ledPin, ledState);
+    }
+    
+    if (text == "/led_off") {
+      bot.sendMessage(chat_id, "LED state set to OFF", "");
+      //ledState = LOW;
+      //digitalWrite(ledPin, ledState);
+    }
+    
+    if (text == "/state") {
+      if (/*digitalRead(ledPin)*/true){
+        bot.sendMessage(chat_id, "LED is ON", "");
+      }
+      else{
+        bot.sendMessage(chat_id, "LED is OFF", "");
+      }
+    }
+  }
+}
 
 // Image sensor settings page
 const char  CAMERA_SETUP_PAGE[] = R"*(
@@ -536,6 +607,62 @@ String setSensor(AutoConnectAux& aux, PageArgument& args) {
   return String();
 }
 
+
+String readFromFile(String filename_, int target_line_, int min_length_, int max_length_, String default_value_, String description_){
+  // init Telegram Bot
+  // read hostname and password from SD card
+  File file = SD_MMC.open(filename_);
+  String result = default_value_;
+  
+  if (!file) {
+    Serial.print("Failed to open file: ");
+    Serial.println(filename_);
+    Serial.print("Using default ");
+    Serial.print(description_);
+    Serial.print(": ");
+    Serial.println(default_value_);
+  }else
+  {
+    std::vector<String> v;
+
+    while (file.available()) {
+      v.push_back(file.readStringUntil('\n'));
+    }
+    file.close();
+    Serial.print("content of ");
+    Serial.print(filename_);
+    Serial.println(": ");
+    for (String s : v) {
+      Serial.println(s);
+    }
+    if (v[0].length() >= min_length_) {
+      if(v[0].length() <= max_length_) {
+        result = v[target_line_];
+      }else
+      {
+        Serial.print("Hostname was too long, please use min. ");
+        Serial.print(max_length_);
+        Serial.println(" characters");
+        Serial.print("Using default ");
+        Serial.print(description_);
+        Serial.print(": ");
+        Serial.println(default_value_);
+      }
+    }else
+    {
+      Serial.print("Hostname was too short, please use min. ");
+      Serial.print(min_length_);
+      Serial.println(" characters");
+      Serial.print("Using default ");
+      Serial.print(description_);
+      Serial.print(": ");
+      Serial.println(default_value_);
+    }
+  }
+  return result;
+}
+
+
 void setup() {
 
 
@@ -548,79 +675,21 @@ void setup() {
   else
     Serial.println ("File system could not be opened; ftp server will not work");
 
-  // read hostname and password from SD card
-  File hostname_file = SD_MMC.open("/hostname.txt");
-
-  if (!hostname_file) {
-    Serial.println("Failed to open file for reading hostname, using default hostname");
-    Serial.print("Hostname: ");
-    Serial.println(esp_hostname);
-  }else
-  {
-    std::vector<String> v;
-
-    while (hostname_file.available()) {
-      v.push_back(hostname_file.readStringUntil('\n'));
-    }
-    hostname_file.close();
-    Serial.println("content of hostname.txt:");
-    
-    for (String s : v) {
-      Serial.println(s);
-    }
-    
-    if (v[0].length() >= MIN_LENGTH_HOSTNAME) {
-      esp_hostname = v[0];
-    }else
-    {
-      Serial.println("Hostname was too short, please use min. 6 characters. Using default hostname");
-      Serial.print("Hostname: ");
-      Serial.println(esp_hostname);
-    }
-  }
-
-  // read hostname and password from SD card
-  File password_file = SD_MMC.open("/password.txt");
-
-  if (!password_file) {
-    Serial.println("Failed to open file for reading password, using default password");
-    Serial.print("Password: ");
-    Serial.println(esp_password);
-  }else
-  {
-    std::vector<String> v;
-
-    while (password_file.available()) {
-      v.push_back(password_file.readStringUntil('\n'));
-    }
-    hostname_file.close();
-    Serial.println("content of password.txt:");
-    
-    for (String s : v) {
-      Serial.println(s);
-    }
-    
-    if (v[0].length() >= MIN_LENGTH_PASSWORD) {
-      esp_password = v[0];
-    }else
-    {
-      Serial.println("Password was too short, please use min. 8 characters. Using default password");
-      Serial.print("Password: ");
-      Serial.println(esp_password);
-    }
-  }
-
+  esp_hostname = readFromFile("/hostname.txt", 0, MIN_LENGTH_HOSTNAME, MAX_LENGTH_HOSTNAME, ESP_HOSTNAME, "Hostname");
+  esp_password = readFromFile("/password.txt", 0, MIN_LENGTH_PASSWORD, MAX_LENGTH_PASSWORD, ESP_PASSWORD, "Password");
   
   // Initialize the image sensor during the start phase of the sketch.
   esp_err_t err = webcam.sensorInit(model);
   if (err != ESP_OK)
     Serial.printf("Camera init failed 0x%04x\n", err);
- 
+  Serial.println("Camera init successful");
+  
   // Loading the image sensor configurarion UI provided by AutoConnectAux.
   portal.load(FPSTR(CAMERA_SETUP_PAGE));
   if (portal.load(FPSTR(CAMERA_SETUP_EXEC)))
     portal.on(_setUrl, setSensor);
- 
+  Serial.println("AutoCOnnect Portal started");
+  
   // The various configuration settings of AutoConnect are also useful for
   // using the ESP32WebCam class.
   config.apid = esp_hostname;
@@ -630,21 +699,21 @@ void setup() {
   config.reconnectInterval = 1;
   config.ota = AC_OTA_BUILTIN;
   portal.config(config);
- 
+
   if (portal.begin()) {
     // Allow hostname.local reach in the local segment by mDNS.
     MDNS.begin(WiFi.getHostname());
     MDNS.addService("http", "tcp", 80);
     Serial.printf("AutoConnect portal %s.local started\n", WiFi.getHostname());
- 
+
     // By configuring NTP, the timestamp appended to the capture filename will
     // be accurate. But this procedure is optional. It does not affect ESP32Cam
     // execution.
     configTzTime(_tz, _ntp1 ,_ntp2);
- 
+
     // Activate ESP32WebCam while WiFi is connected.
     err = webcam.startCameraServer();
- 
+
     if (err == ESP_OK) {
       // This sketch has two endpoints. One assigns the root page as the
       // entrance, and the other assigns a redirector to lead to the viewer-UI
@@ -662,7 +731,21 @@ void setup() {
   
   ESP32WebCam::_initFastLED();
   //ESP32WebCam::_showLED();
- 
+
+  BOTtoken = readFromFile("/telegram_token.txt", 0, 0, 200, TELEGRAM_BOT_TOKEN, "Telegram Bot Token");
+  bot = UniversalTelegramBot(BOTtoken, clientTCP);
+  CHAT_ID = readFromFile("/telegram_chat_id.txt", 0, 0, 200, TELEGRAM_CHAT_ID, "Telegram Chat ID");
+
+  #ifdef ESP8266
+    configTime(0, 0, "pool.ntp.org");      // get UTC time via NTP
+    clientTCP.setTrustAnchors(&cert); // Add root certificate for api.telegram.org
+  #endif
+  
+  
+  #ifdef ESP32
+    clientTCP.setCACert(TELEGRAM_CERTIFICATE_ROOT); // Add root certificate for api.telegram.org
+  #endif
+  
 }
 void loop() {
   // The handleClient is needed for WebServer class hosted with AutoConnect.
@@ -670,7 +753,19 @@ void loop() {
   // separate task.
   portal.handleClient();  
   ftpSrvSD.handleFTP (SD_MMC);        //make sure in loop you call handleFTP()!
-		
+  
+  if (millis() > lastTimeBotRan + botRequestDelay)  {
+    int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+
+    while(numNewMessages) {
+      Serial.println("got response");
+      handleNewMessages(numNewMessages);
+      numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+    }
+    lastTimeBotRan = millis();
+  }
+
+  
   //// Allow CPU to switch to other tasks.
   delay(1);
 }
