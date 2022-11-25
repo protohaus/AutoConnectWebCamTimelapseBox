@@ -16,7 +16,6 @@
 
 #ifndef _ESP32CAM_H_
 #define _ESP32CAM_H_
-
 #include <esp_err.h>
 #include <esp_camera.h>
 #include <esp_http_server.h>
@@ -25,6 +24,9 @@
 #include <SD_MMC.h>
 #include "settings.h"
 #include <FastLED.h>
+#include "UniversalTelegramBot.h"
+#include <WiFiClientSecure.h>
+#include <ArduinoJson.h>
 
 // The type of hardware timer used by the timer shot
 #ifndef ESP32CAM_OCCUPIED_TIMER
@@ -59,6 +61,9 @@
 #ifndef ESP32CAM_FS_MOUNTPROBE
 #define ESP32CAM_FS_MOUNTPROBE        "/_~" ESP32CAM_GLOBAL_IDENTIFIER "~"
 #endif //!ESP32CAM_FS_MOUNTPROBE
+
+
+
 
 class ESP32Cam {
  public:
@@ -105,13 +110,21 @@ class ESP32Cam {
   void _showLED();
   void _setBrightness(float brightness_);
   void _setPower(bool power_);
+
+  void _initTelegramBot(String token, String chat_id);
+  
+  String getLatestFile(void);
+  
   
   CRGB leds[NUM_LEDS];
   CRGB currentColor{CRGB::White};
   float brightness{INITIAL_BRIGHTNESS_PERCENTAGE};
   bool power{true};
   bool automation{false};
-  
+  String _latestFile;         /**< Latest file saved by timershot. */
+  static int getBufferLen();
+  static byte* getNextBuffer();
+  static bool hasMoreDataAvailable();
  protected:
   typedef enum {
     MOUNT_NONE,
@@ -130,7 +143,8 @@ class ESP32Cam {
 
   fs::FS*   _sdFile;          /**< Current SD filesystem */
   SDType_t  _mounted;         /**< Type of mounted SD */
-
+  
+  
  private:
   typedef struct {
     const int8_t  pwdn_gpio_num;
@@ -163,7 +177,8 @@ class ESP32Cam {
   sensor_t*     _sensor;      /**< The currnet sensor characteristics */
   hw_timer_t*   _hwTimer;     /**< HW Timer for Timer-Shot */
   String  _captureName;       /**< Name of the file where the captured image will be saved. */
-
+  
+  
   static const _pinsAssign_t _pinsMap[];  // The pin assignment for wiring to the sensor is static.
   static const char _mountProbe[];  // Name of a dummy file to check if the file system is mounted.
 };

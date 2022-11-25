@@ -49,7 +49,7 @@
 #include "SD_MMC.h"
 #include <FastLED.h>
 #include <EEPROM.h>
-#include <UniversalTelegramBot.h>
+//#include <UniversalTelegramBot.h>
 #include <ArduinoJson.h>
 #include "settings.h"
 
@@ -61,74 +61,110 @@ String esp_hostname = ESP_HOSTNAME; // min. 3 characters
 String esp_password = ESP_PASSWORD;
 
 // Initialize Telegram BOT
-String BOTtoken = TELEGRAM_BOT_TOKEN;  // your Bot Token (Get from Botfather)
+//String BOTtoken = TELEGRAM_BOT_TOKEN;  // your Bot Token (Get from Botfather)
 
 // Use @myidbot to find out the chat ID of an individual or a group
 // Also note that you need to click "start" on a bot before it can
 // message you
-String CHAT_ID = TELEGRAM_CHAT_ID;
+//String CHAT_ID = TELEGRAM_CHAT_ID;
 
-bool sendPhoto = false;
-WiFiClientSecure clientTCP;
-UniversalTelegramBot bot(BOTtoken, clientTCP);
+//bool sendPhoto = false;
+//WiFiClientSecure clientTCP;
+//UniversalTelegramBot bot(BOTtoken, clientTCP);
 
 //Checks for new messages every 1 second.
-int botRequestDelay = 1000;
-unsigned long lastTimeBotRan;
+//unsigned long botRequestDelay = TELEGRAM_BOT_POLL_INTERVAL;
+//unsigned long lastTimeBotRan;
 
 
 FtpServer ftpSrvSD(FTP_CTRL_PORT_SD, FTP_DATA_PORT_PASV_SD);   //set #define FTP_DEBUG in ESP32FtpServer.h to see ftp verbose on serial
 
-// Handle what happens when you receive new messages
-void handleNewMessages(int numNewMessages) {
-  Serial.println("handleNewMessages");
-  Serial.println(String(numNewMessages));
-
-  for (int i=0; i<numNewMessages; i++) {
-    // Chat id of the requester
-    String chat_id = String(bot.messages[i].chat_id);
-    if (chat_id != CHAT_ID){
-      bot.sendMessage(chat_id, "Unauthorized user", "");
-      continue;
+bool hasEnding (std::string const &fullString, std::string const &ending) {
+    if (fullString.length() >= ending.length()) {
+        return (0 == fullString.compare(fullString.length() - ending.length(), ending.length(), ending));
+    } else {
+        return false;
     }
-    
-    // Print the received message
-    String text = bot.messages[i].text;
-    Serial.println(text);
-
-    String from_name = bot.messages[i].from_name;
-
-    if (text == "/start") {
-      String welcome = "Welcome, " + from_name + ".\n";
-      welcome += "Use the following commands to control your outputs.\n\n";
-      welcome += "/led_on to turn GPIO ON \n";
-      welcome += "/led_off to turn GPIO OFF \n";
-      welcome += "/state to request current GPIO state \n";
-      bot.sendMessage(chat_id, welcome, "");
-    }
-
-    if (text == "/led_on") {
-      bot.sendMessage(chat_id, "LED state set to ON", "");
-      //ledState = HIGH;
-      //digitalWrite(ledPin, ledState);
-    }
-    
-    if (text == "/led_off") {
-      bot.sendMessage(chat_id, "LED state set to OFF", "");
-      //ledState = LOW;
-      //digitalWrite(ledPin, ledState);
-    }
-    
-    if (text == "/state") {
-      if (/*digitalRead(ledPin)*/true){
-        bot.sendMessage(chat_id, "LED is ON", "");
-      }
-      else{
-        bot.sendMessage(chat_id, "LED is OFF", "");
-      }
-    }
-  }
 }
+
+
+void listDir(char * dir){
+ 
+  File root = SD_MMC.open(dir);
+ 
+  File file = root.openNextFile();
+  File save_file;
+  
+  while(file){
+      std::string filename = file.name();
+      Serial.print("FILE: ");
+      Serial.println(filename.c_str());
+
+      if (hasEnding(filename, ".jpg"))
+        save_file = file;
+        
+      file = root.openNextFile();
+  }
+
+  String latest_picture =  save_file.name();
+  Serial.print("latest picture: ");
+  Serial.println(latest_picture);
+  
+  file.close();
+  root.close();
+}
+
+// Handle what happens when you receive new messages
+//void handleNewMessages(int numNewMessages) {
+//  Serial.println("handleNewMessages");
+//  Serial.println(String(numNewMessages));
+//
+//  for (int i=0; i<numNewMessages; i++) {
+//    // Chat id of the requester
+//    String chat_id = String(bot.messages[i].chat_id);
+//    if (chat_id != CHAT_ID){
+//      bot.sendMessage(chat_id, "Unauthorized user", "");
+//      continue;
+//    }
+//    
+//    // Print the received message
+//    String text = bot.messages[i].text;
+//    Serial.println(text);
+//
+//    String from_name = bot.messages[i].from_name;
+//
+//    if (text == "/start") {
+//      String welcome = "Welcome, " + from_name + ".\n";
+//      welcome += "Use the following commands to control your outputs.\n\n";
+//      welcome += "/led_on to turn GPIO ON \n";
+//      welcome += "/led_off to turn GPIO OFF \n";
+//      welcome += "/state to request current GPIO state \n";
+//      bot.sendMessage(chat_id, welcome, "");
+//    }
+//
+//    if (text == "/led_on") {
+//      bot.sendMessage(chat_id, "LED state set to ON", "");
+//      //ledState = HIGH;
+//      //digitalWrite(ledPin, ledState);
+//    }
+//    
+//    if (text == "/led_off") {
+//      bot.sendMessage(chat_id, "LED state set to OFF", "");
+//      //ledState = LOW;
+//      //digitalWrite(ledPin, ledState);
+//    }
+//    
+//    if (text == "/state") {
+//      if (/*digitalRead(ledPin)*/true){
+//        bot.sendMessage(chat_id, "LED is ON", "");
+//      }
+//      else{
+//        bot.sendMessage(chat_id, "LED is OFF", "");
+//      }
+//    }
+//  }
+//}
+
 
 // Image sensor settings page
 const char  CAMERA_SETUP_PAGE[] = R"*(
@@ -662,10 +698,88 @@ String readFromFile(String filename_, int target_line_, int min_length_, int max
   return result;
 }
 
+static int taskCore = 1;
+ 
+void coreTask( void * pvParameters ){
+ 
+    String taskMessage = "Task running on core ";
+    taskMessage = taskMessage + xPortGetCoreID();
+ 
+    while(true){
+        Serial.println(taskMessage);
+        delay(1000);
+    }
+ 
+}
+
+
+
+void telegramTask_(){
+//  if (millis() - lastTimeBotRan >= botRequestDelay){
+//      Serial.println("check for telegram messages");
+//      int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+//      while(numNewMessages) {
+//        Serial.println("got response");
+//        handleNewMessages(numNewMessages);
+//        numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+//      }
+//      lastTimeBotRan = millis(); 
+//    }
+//  if (millis() > lastTimeBotRan + botRequestDelay)  {
+//    int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+//    while (numNewMessages) {
+//      Serial.println("got response");
+//      handleNewMessages(numNewMessages);
+//      numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+//    }
+//    lastTimeBotRan = millis();
+//  }
+//  File myFile;
+//  if (millis() - lastTimeBotRan > botRequestDelay)  {
+//    String file_name = webcam.getLatestFile();
+//    Serial.print("Telegram Task got filename: ");
+//    Serial.println(file_name);
+//    
+//    myFile = SD_MMC.open(file_name);
+//
+//      if (myFile) {
+//        Serial.print(file_name);
+//        Serial.print("....");
+//  
+//        //Content type for PNG image/png
+//       // String sent = bot.sendPhotoByBinary(CHAT_ID, "image/jpeg", (int)myFile.size(), isMoreDataAvailable(myFile), getNextByte(myFile), nullptr, nullptr);
+//
+//        //bot.sendMessage(CHAT_ID, "Hi:","");         //THIS WORKS
+//        //bot.sendMessage(CHAT_ID, CHAT_ID,"");       //THIS WORKS
+//  
+//        //if (sent) {
+//        //  Serial.println("was successfully sent");  //THIS IS PRINTED IN MY SERIAL MONITOR
+//        //} else {
+//        //  Serial.println("was not sent");
+//        //}
+//  
+//    } else {
+//      // if the file didn't open, print an error:
+//      Serial.println("error opening photo");
+//    }
+//    myFile.close();
+//  }  
+
+  
+  
+}
+void telegramTask(void *parameter){
+  String taskMessage = "Telegram Task running on core ";
+  taskMessage = taskMessage + xPortGetCoreID();
+  Serial.println(taskMessage);
+  
+  while(true){
+    telegramTask_();
+    vTaskDelay(100);
+  }
+}  
 
 void setup() {
-
-
   delay(1000);
   Serial.begin(115200);
   Serial.println();
@@ -726,46 +840,78 @@ void setup() {
     else
       Serial.printf("Camera server start failed 0x%04x\n", err);
   }
-  
+
   ftpSrvSD.begin (esp_hostname, esp_password.c_str());    //username, password for ftp.  set ports in ESPFtpServer.h  (default 21, 50009 for PASV)
+  Serial.println("FTP Server Started");
+  
+  delay(200);
   
   ESP32WebCam::_initFastLED();
   //ESP32WebCam::_showLED();
+  Serial.println("LED Controller Started");
+  
+  delay(200);
+  
+  String telegram_token = readFromFile("/telegram_token.txt", 0, 0, 200, TELEGRAM_BOT_TOKEN, "Telegram Bot Token");
+  String telegram_chat_id = readFromFile("/telegram_chat_id.txt", 0, 0, 200, TELEGRAM_CHAT_ID, "Telegram Chat ID");
 
-  BOTtoken = readFromFile("/telegram_token.txt", 0, 0, 200, TELEGRAM_BOT_TOKEN, "Telegram Bot Token");
-  bot = UniversalTelegramBot(BOTtoken, clientTCP);
-  CHAT_ID = readFromFile("/telegram_chat_id.txt", 0, 0, 200, TELEGRAM_CHAT_ID, "Telegram Chat ID");
+  ESP32WebCam::_initTelegramBot(telegram_token, telegram_chat_id);
+  Serial.println("Telegram Bot initialized");
+  
+  //listDir("/");
 
-  #ifdef ESP8266
-    configTime(0, 0, "pool.ntp.org");      // get UTC time via NTP
-    clientTCP.setTrustAnchors(&cert); // Add root certificate for api.telegram.org
-  #endif
+  //lastTimeBotRan = millis();
+
+//  xTaskCreatePinnedToCore(
+//                    telegramTask,   /* Function to implement the task */
+//                    "telegramTask", /* Name of the task */
+//                    10000,      /* Stack size in words */
+//                    NULL,       /* Task input parameter */
+//                    0,          /* Priority of the task */
+//                    NULL,       /* Task handle. */
+//                    0);  /* Core where the task should run */
+  }  
   
-  
-  #ifdef ESP32
-    clientTCP.setCACert(TELEGRAM_CERTIFICATE_ROOT); // Add root certificate for api.telegram.org
-  #endif
-  
-}
 void loop() {
   // The handleClient is needed for WebServer class hosted with AutoConnect.
   // ESP-IDF Web Server component launched by the ESP32WebCam continues in a
   // separate task.
   portal.handleClient();  
   ftpSrvSD.handleFTP (SD_MMC);        //make sure in loop you call handleFTP()!
-  
-  if (millis() > lastTimeBotRan + botRequestDelay)  {
-    int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
 
-    while(numNewMessages) {
-      Serial.println("got response");
-      handleNewMessages(numNewMessages);
-      numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+  /*
+  File myFile;
+  if (millis() - lastTimeBotRan > botRequestDelay)  
+  {
+    String file_name = webcam.getLatestFile();
+    Serial.print("Telegram Task got filename: ");
+    Serial.println(file_name);
+    
+    myFile = SD_MMC.open(file_name);
+
+    if (myFile) {
+      //Content type for PNG image/png
+      //String sent = bot.sendPhotoByBinary(CHAT_ID, "image/jpeg", myFile.size(), isMoreDataAvailable(myFile), getNextByte(myFile), nullptr, nullptr);
+
+      //bot.sendMessage(CHAT_ID, "Hi:","");         //THIS WORKS
+      //bot.sendMessage(CHAT_ID, CHAT_ID,"");       //THIS WORKS
+  
+      //if (sent) {
+      //  Serial.println("was successfully sent");  //THIS IS PRINTED IN MY SERIAL MONITOR
+      //} else {
+      //  Serial.println("was not sent");
+      //}
+    } else {
+      // if the file didn't open, print an error:
+      Serial.println("error opening photo");
     }
+    
+    myFile.close();
     lastTimeBotRan = millis();
-  }
+  }  
 
-  
+  */
+  //telegramTask_();
   //// Allow CPU to switch to other tasks.
   delay(1);
 }

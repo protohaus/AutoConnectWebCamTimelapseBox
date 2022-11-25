@@ -18,3 +18,5 @@
 
 #define MILLI_AMPS         1600 // IMPORTANT: set the max milli-Amps of your power supply (4A = 4000mA)
 #define FRAMES_PER_SECOND  120
+
+#define TELEGRAM_BOT_POLL_INTERVAL 10000

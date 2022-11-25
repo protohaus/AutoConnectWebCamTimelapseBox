@@ -114,13 +114,15 @@ class ESP32WebCam {
   esp_err_t startCameraServer(const char* streamPath, const char* capturePath, const char* promptPath) { return startCameraServer(streamPath, capturePath, promptPath, _port); }
   esp_err_t startCameraServer(const char* streamPath, const char* capturePath, const char* promptPath, const uint16_t port);
   void      stopCameraServer(void);
-
+  String    getLatestFile(void);
+  
   static void _initFastLED();
   static void _showLED();
   static void _setPower(bool power_);
   static void _setColor(CRGB color_);
   static void _setBrightness(float brightness_);
   static void _setAutomation(bool automation_);
+  static void _initTelegramBot(String token, String client_id);
   
  protected:
   static esp_err_t _captureHandler(httpd_req_t* req);

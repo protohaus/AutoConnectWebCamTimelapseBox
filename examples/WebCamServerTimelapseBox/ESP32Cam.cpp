@@ -34,8 +34,17 @@ volatile  SemaphoreHandle_t xMutex = NULL;
 //CRGB currentColor = CRGB::White;
 //bool power = true;
 //bool automation = false;
-};
 
+String BOTtoken = TELEGRAM_BOT_TOKEN;  // your Bot Token (Get from Botfather)
+String CHAT_ID = TELEGRAM_CHAT_ID;
+
+WiFiClientSecure clientTCP;
+
+UniversalTelegramBot bot(BOTtoken, clientTCP);
+  
+};
+bool hasMoreData;
+camera_fb_t * fb = NULL;
 
 // Name of a dummy file to check if the file system is mounted.
 const char ESP32Cam::_mountProbe[]= { ESP32CAM_FS_MOUNTPROBE };
@@ -66,6 +75,7 @@ ESP32Cam::~ESP32Cam() {
   esp_camera_deinit();
   _purgeTimer();
 }
+
 
 /**
  * Device initialization detects and configures camera over I2C interface,
@@ -325,6 +335,10 @@ uint16_t ESP32Cam::getFrameWidth(void) {
     width = 0;
   }
   return width;
+}
+
+String ESP32Cam::getLatestFile() {
+  return _latestFile;
 }
 
 /**
@@ -647,20 +661,39 @@ void ESP32Cam::_timerShotTask(void* pvParametes) {
       delay(LED_DELAY);
     }
     // Assemble the file name of the destination of the captured image.
-    char  fn[esp32cam->_captureName.length() + sizeof('\0') + 20];
+    char  fn[esp32cam->_captureName.length() + sizeof('\0') + 20 + sizeof(ESP32CAM_EXPORT_FILEEXTENSION)];
     strcpy(fn, esp32cam->_captureName.c_str());
     esp32cam->_appendTimestamp(fn);
-
+    
     // Capture and export to SD
     esp32cam->_export(fn, nullptr);
+    strcat(fn, ESP32CAM_EXPORT_FILEEXTENSION);
+    
+    esp32cam->_latestFile = fn;
+    Serial.print("Latest file: ");
+    Serial.println(esp32cam->_latestFile);
+
+    char  fn2[sizeof('\0') + 20];
+    esp32cam->_appendTimestamp(fn2);
+    Serial.print("Current Time: ");
+    Serial.println(fn2);
+
+    
+     
     if(esp32cam->automation){
       esp32cam->_setPower(false);
       esp32cam->_showLED();
     }
     
+    
+    ESP32Cam_internal::bot.sendMessage(ESP32Cam_internal::CHAT_ID, "Made photo","");
+    delay(400);
+    
+    
     // Release the resource and restart the timer increment.
     timerStart(esp32cam->_hwTimer);
     deq();
+    
     // Purge itself
     vTaskDelete(NULL);
   }
@@ -862,7 +895,61 @@ esp_err_t ESP32Cam::_export(const char* filename, camera_fb_t* frameBuffer) {
       log_e("SD %s open failed\n", fn);
       rc = ESP_ERR_NOT_FOUND;
     }
+
+    const char* myDomain = "api.telegram.org";
+    //esp_camera_fb_return(frameBuffer);
+    delay(1000);
+    fb = NULL;
+    //fb = esp_camera_fb_get();
+    fb = frameBuffer;
+    if(!fb) {
+    Serial.println("Camera capture failed");
+    }  
+  
+    Serial.println("Connect to " + String(myDomain));
+
+    if (ESP32Cam_internal::clientTCP.connect(myDomain, 443)) {
+    Serial.println("Connection successful");
+    
+    String head = "--RandomNerdTutorials\r\nContent-Disposition: form-data; name=\"chat_id\"; \r\n\r\n" + ESP32Cam_internal::CHAT_ID + "\r\n--RandomNerdTutorials\r\nContent-Disposition: form-data; name=\"photo\"; filename=\"esp32-cam.jpg\"\r\nContent-Type: image/jpeg\r\n\r\n";
+    String tail = "\r\n--RandomNerdTutorials--\r\n";
+
+    uint16_t imageLen = fb->len;
+    uint16_t extraLen = head.length() + tail.length();
+    uint16_t totalLen = imageLen + extraLen;
+  
+    ESP32Cam_internal::clientTCP.println("POST /bot"+ESP32Cam_internal::BOTtoken+"/sendPhoto HTTP/1.1");
+    ESP32Cam_internal::clientTCP.println("Host: " + String(myDomain));
+    ESP32Cam_internal::clientTCP.println("Content-Length: " + String(totalLen));
+    ESP32Cam_internal::clientTCP.println("Content-Type: multipart/form-data; boundary=RandomNerdTutorials");
+    ESP32Cam_internal::clientTCP.println();
+    ESP32Cam_internal::clientTCP.print(head);
+  
+    uint8_t *fbBuf = fb->buf;
+    size_t fbLen = fb->len;
+    for (size_t n=0;n<fbLen;n=n+1024) {
+      if (n+1024<fbLen) {
+        ESP32Cam_internal::clientTCP.write(fbBuf, 1024);
+        fbBuf += 1024;
+      }
+      else if (fbLen%1024>0) {
+        size_t remainder = fbLen%1024;
+        ESP32Cam_internal::clientTCP.write(fbBuf, remainder);
+      }
+    }  
+    
+    ESP32Cam_internal::clientTCP.print(tail);
+
+
+    
+    //hasMoreData = true;
+    //Serial.print("framebuffer length: ");
+    //Serial.println(fb->len);
+  
+    //ESP32Cam_internal::bot.sendPhotoByBinary(ESP32Cam_internal::CHAT_ID, "image/jpeg", fb->len, ESP32Cam::hasMoreDataAvailable, nullptr, ESP32Cam::getNextBuffer, ESP32Cam::getBufferLen);
+    esp_camera_fb_return(fb);
     esp_camera_fb_return(frameBuffer);
+    delay(400);
   }
   else {
     log_e("failed to esp_camera_fb_get\n");
@@ -870,6 +957,7 @@ esp_err_t ESP32Cam::_export(const char* filename, camera_fb_t* frameBuffer) {
   }
 
   return rc;
+}
 }
 
 /**
@@ -887,10 +975,57 @@ void ESP32Cam::_purgeTimer(void) {
   }
 }
 
+
+bool ESP32Cam::hasMoreDataAvailable() {
+  Serial.println("Has more daa");
+  if (hasMoreData) {
+    hasMoreData = false;
+    return true;
+  }
+
+  return false;
+}
+
+
+byte* ESP32Cam::getNextBuffer() {
+  Serial.println("Next Buffer ");
+  if (fb)
+    return fb->buf;
+
+  return nullptr;
+}
+
+int ESP32Cam::getBufferLen() {
+Serial.println("Buffer len");
+ if (fb)
+   return fb->len;
+
+  return 0;
+}
+
 void ESP32Cam::_initFastLED() {
   FastLED.addLeds<LED_TYPE, LED_PIN, COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
   FastLED.setMaxPowerInVoltsAndMilliamps(5, MILLI_AMPS);
   FastLED.setBrightness(MAX_BRIGHTNESS);
+}
+
+void ESP32Cam::_initTelegramBot(String token, String chat_id) {
+  ESP32Cam_internal::BOTtoken = token;  // your Bot Token (Get from Botfather)
+  ESP32Cam_internal::CHAT_ID = chat_id;
+
+  ESP32Cam_internal::bot = UniversalTelegramBot (token, ESP32Cam_internal::clientTCP);
+
+  #ifdef ESP32
+    ESP32Cam_internal::clientTCP.setCACert(TELEGRAM_CERTIFICATE_ROOT); // Add root certificate for api.telegram.org
+  #endif
+
+  #ifdef ESP8266
+    //configTime(0, 0, "pool.ntp.org");      // get UTC time via NTP
+    ESP32Cam_internal::clientTCP.setTrustAnchors(&cert); // Add root certificate for api.telegram.org
+  #endif
+  delay(200);
+  ESP32Cam_internal::bot.sendMessage(ESP32Cam_internal::CHAT_ID, "Telegram Bot is online","");         //THIS WORKS
+  ESP32Cam_internal::bot.sendMessage(ESP32Cam_internal::CHAT_ID, "Telegram Bot is still online","");         //THIS WORKS
 }
 
 void ESP32Cam::_showLED() {
