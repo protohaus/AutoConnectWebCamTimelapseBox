@@ -24,9 +24,9 @@
 #include <SD_MMC.h>
 #include "settings.h"
 #include <FastLED.h>
-#include "UniversalTelegramBot.h"
-#include <WiFiClientSecure.h>
-#include <ArduinoJson.h>
+//#include "UniversalTelegramBot.h"
+//#include <WiFiClientSecure.h>
+//#include <ArduinoJson.h>
 
 // The type of hardware timer used by the timer shot
 #ifndef ESP32CAM_OCCUPIED_TIMER
@@ -111,7 +111,7 @@ class ESP32Cam {
   void _setBrightness(float brightness_);
   void _setPower(bool power_);
 
-  void _initTelegramBot(String token, String chat_id);
+  //void _initTelegramBot(String token, String chat_id);
   
   String getLatestFile(void);
   
@@ -122,9 +122,9 @@ class ESP32Cam {
   bool power{true};
   bool automation{false};
   String _latestFile;         /**< Latest file saved by timershot. */
-  static int getBufferLen();
-  static byte* getNextBuffer();
-  static bool hasMoreDataAvailable();
+  //static int getBufferLen();
+  //static byte* getNextBuffer();
+  //static bool hasMoreDataAvailable();
  protected:
   typedef enum {
     MOUNT_NONE,

@@ -44,9 +44,9 @@ void ESP32WebCam::_initFastLED() {
   ESP32WebCam_internal::esp32webcam->_esp32cam.get()->_initFastLED();
 }
 
-void ESP32WebCam::_initTelegramBot(String token, String client_id) {
-  ESP32WebCam_internal::esp32webcam->_esp32cam.get()->_initTelegramBot(token, client_id);
-}
+//void ESP32WebCam::_initTelegramBot(String token, String client_id) {
+//  ESP32WebCam_internal::esp32webcam->_esp32cam.get()->_initTelegramBot(token, client_id);
+//}
 
 void ESP32WebCam::_showLED() {
   ESP32WebCam_internal::esp32webcam->_esp32cam.get()->_showLED();

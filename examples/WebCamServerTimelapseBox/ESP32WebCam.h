@@ -122,7 +122,7 @@ class ESP32WebCam {
   static void _setColor(CRGB color_);
   static void _setBrightness(float brightness_);
   static void _setAutomation(bool automation_);
-  static void _initTelegramBot(String token, String client_id);
+  //static void _initTelegramBot(String token, String client_id);
   
  protected:
   static esp_err_t _captureHandler(httpd_req_t* req);
