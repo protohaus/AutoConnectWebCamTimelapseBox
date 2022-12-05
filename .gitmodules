@@ -1,3 +1,6 @@
 [submodule "examples/WebCamServerTimelapseBox/src/ESPFtpServer"]
 	path = examples/WebCamServerTimelapseBox/src/ESPFtpServer
 	url = https://github.com/protohaus/ESPFtpServerUserPorts.git
+[submodule "examples/WebCamServerTimelapseBox/src/esp32-fastled-webserver-timelapse"]
+	path = examples/WebCamServerTimelapseBox/src/esp32-fastled-webserver-timelapse
+	url = https://github.com/protohaus/esp32-fastled-webserver-timelapse.git
