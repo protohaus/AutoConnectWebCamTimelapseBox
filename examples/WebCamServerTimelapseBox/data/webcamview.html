@@ -308,6 +308,7 @@ main > div {
 				<li><input type="button" value="blue" onclick="blue()" style="background-color:blue"/><input type="button" value="lightblue" onclick="lightblue()" style="background-color:lightblue"/></li>
 				<li><input type="button" value="white" onclick="white()" style="background-color:white"/><input type="button" value="black" onclick="black()" style="background-color:black"/></li>
 				<li><input type="button" value="grey" onclick="grey()" style="background-color:grey"/><input type="button" value="brown" onclick="brown()" style="background-color:brown"/></li>
+				<li><label for="Int">Int.</label><input type="button" value="1" onclick="brightness01()" /><input type="button" value="2" onclick="brightness02()" /><input type="button" value="5" onclick="brightness05()" /><input type="button" value="10" onclick="brightness10()" /></li>
 				<li><label for="Int">Int.</label><input type="button" value="25" onclick="brightness25()" /><input type="button" value="50" onclick="brightness75()" /><input type="button" value="75" onclick="brightness75()" /><input type="button" value="100" onclick="brightness100()" /></li>
 				<li><label for="Power">Power</label><input type="button" value="ON" onclick="led_on()"/><input type="button" value="OFF" onclick="led_off()"/></li>
                 <li><label for="Automation">Automation</label><input type="button" value="ON" onclick="led_automation_on()"/><input type="button" value="OFF" onclick="led_automation_off()"/></li>
@@ -478,6 +479,26 @@ main > div {
 	
 	function brown() {
 	  promptUrl.search = "?mf=brown";
+	  prompt(promptUrl); 
+	}
+	
+	function brightness01() {
+	  promptUrl.search = "?mf=brightness01";
+	  prompt(promptUrl); 
+	}
+	
+	function brightness02() {
+	  promptUrl.search = "?mf=brightness02";
+	  prompt(promptUrl); 
+	}
+	
+	function brightness05() {
+	  promptUrl.search = "?mf=brightness05";
+	  prompt(promptUrl); 
+	}
+	
+	function brightness10() {
+	  promptUrl.search = "?mf=brightness10";
 	  prompt(promptUrl); 
 	}
 	

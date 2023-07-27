@@ -485,6 +485,26 @@ esp_err_t ESP32WebCam::_promptHandler(httpd_req_t* req) {
         ESP32WebCam::_showLED();
         rc = ESP_OK;
      }
+     else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_BRIGHTNESS01, mf)) {
+      ESP32WebCam::_setBrightness(0.01);
+       ESP32WebCam::_showLED();
+       rc = ESP_OK;
+     }
+     else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_BRIGHTNESS02, mf)) {
+      ESP32WebCam::_setBrightness(0.02);
+       ESP32WebCam::_showLED();
+       rc = ESP_OK;
+     }
+     else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_BRIGHTNESS05, mf)) {
+      ESP32WebCam::_setBrightness(0.05);
+       ESP32WebCam::_showLED();
+       rc = ESP_OK;
+     }
+     else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_BRIGHTNESS10, mf)) {
+      ESP32WebCam::_setBrightness(0.1);
+       ESP32WebCam::_showLED();
+       rc = ESP_OK;
+     }
 	   else if (!strcmp(ESP32CAM_PROMPT_OPERAND_VALUE_BRIGHTNESS25, mf)) {
 		   ESP32WebCam::_setBrightness(0.25);
        ESP32WebCam::_showLED();

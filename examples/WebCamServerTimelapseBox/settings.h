@@ -11,7 +11,7 @@
 #define LED_TYPE    WS2812
 #define LED_PIN 3
 #define COLOR_ORDER GRB
-#define NUM_LEDS 13
+#define NUM_LEDS 29
 #define MAX_BRIGHTNESS 255
 #define INITIAL_BRIGHTNESS_PERCENTAGE 1.0
 #define LED_DELAY 500

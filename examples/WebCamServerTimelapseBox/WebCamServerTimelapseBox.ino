@@ -768,7 +768,6 @@ void setup() {
   ESP32WebCam::_initFastLED();
   //ESP32WebCam::_showLED();
   Serial.println("LED Controller Started");
-  
   delay(200);
   
   //String telegram_token = readFromFile("/telegram_token.txt", 0, 0, 200, TELEGRAM_BOT_TOKEN, "Telegram Bot Token");
